@@ -8,6 +8,9 @@ import random
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy import sparse
 
+maxID = 121
+maxGame = 11
+
 def cos_sim(v1, v2): 
     dot_product = np.dot(v1, v2)
     l2_norm = (np.sqrt(sum(np.square(v1))) * np.sqrt(sum(np.square(v2))))
@@ -132,8 +135,8 @@ def OverPlayerCos(dbName):
     aiFilterPos.columns = ['A_ID', 'A_Game', 'A_Step', 'A_xPos', 'A_yPos']
 
     # 형변환
-    playerOver = sparse.csr_matrix(P_Filter[['step', 'xPos', 'yPos']].values)
-    aiOver = sparse.csr_matrix(A_Filter[['step', 'xPos', 'yPos']].values)
+    playerOver = sparse.csr_matrix(P_Filter[['xPos', 'yPos']].values)
+    aiOver = sparse.csr_matrix(A_Filter[['xPos', 'yPos']].values)
 
     # 유사도 계산
     similarity_simple_pair = cosine_similarity(playerOver, aiOver)
@@ -162,12 +165,36 @@ def OverPlayerCos(dbName):
 
     avgDF = list()
     # 이제 검사된 값으로 반대로 가장 비슷한 학습량을 찾아냄
+    # 평균을 계산할때 Ai와 플레이어의 횟수를 검사한다.
     for ID in range(1, idCount):
         # 먼저 필터한다.
         A_filterDF = cosDF[cosDF['A_ID'] == str(ID)]
+        # 유사도 순으로 정렬1
         A_filterDF = A_filterDF.sort_values(by=['Cos'], ascending=False, axis=0)
+        # 정렬 된 유사도 중 1등만 빼고 삭제한다.
         A_filterDF = A_filterDF.drop_duplicates(['P_Step'])
-        avg = np.mean(A_filterDF['Cos'].values)
+        # 플레이더 데이터가 AI 데이터보다 적을 경우
+        aiFilter = aiFilterPos[aiFilterPos['A_ID'] == str(ID)]
+        lenP = len(playerTablePos)
+        lenA = len(aiFilter)
+        avg = 0
+        if lenP > lenA:
+            # 정렬을 반대로 바꾼다
+            A_filterDF = A_filterDF.sort_values(by=['Cos'], ascending= True, axis=0)
+            plusNum = lenP - lenA
+            for i in range(0, plusNum):
+                A_filterDF['Cos'].values[i] = 0
+            avg = np.mean(A_filterDF['Cos'].values)
+        elif lenP < lenA:
+            # 그 차만큼 허수를 생성
+            plusNum = lenA - lenP
+            plusArray = np.zeros(plusNum)
+            orginArray = A_filterDF['Cos'].values
+            conNP = np.concatenate((orginArray, plusArray), axis=0)
+            avg = np.mean(conNP)
+        else:
+            avg = np.mean(A_filterDF['Cos'].values)
+        
         appendAvgDF =  pd.DataFrame(data=[(str(saveDBname), str(ID), avg)], columns = ['P_ID', 'A_ID', 'Cos'])
         avgDF.append(appendAvgDF)
     
@@ -275,7 +302,31 @@ def JumpPlayerCos(dbName):
                 aiFilter2 = aiFilter[aiFilter['A_Game'] == aiGame]
                 aiFilter2 = aiFilter2.sort_values(by=['Cos'], ascending=False, axis=0)
                 aiFilter2 = aiFilter2.drop_duplicates(['P_Step'])
-                avg = np.mean(aiFilter2['Cos'].values)
+                
+                # 플레이더 데이터가 AI 데이터보다 적을 경우
+                aiFiltering = aiFilterPos[aiFilterPos['A_ID'] == str(ID)]
+                aiFiltering = aiFiltering[aiFiltering['A_Game'] == aiGame]
+                playerFiltering = playerTablePos[playerTablePos['P_Game'] == Game]
+                lenP = len(playerFiltering)
+                lenA = len(aiFiltering)
+                avg = 0
+                if lenP > lenA:
+                    # 정렬을 반대로 바꾼다
+                    aiFilter2 = aiFilter2.sort_values(by=['Cos'], ascending= True, axis=0)
+                    plusNum = lenP - lenA
+                    for i in range(0, plusNum):
+                        aiFilter2['Cos'].values[i] = 0
+                    avg = np.mean(aiFilter2['Cos'].values)
+                elif lenP < lenA:
+                    # 그 차만큼 허수를 생성
+                    plusNum = lenA - lenP
+                    plusArray = np.zeros(plusNum)
+                    orginArray = aiFilter2['Cos'].values
+                    conNP = np.concatenate((orginArray, plusArray), axis=0)
+                    avg = np.mean(conNP)
+                else:
+                    avg = np.mean(aiFilter2['Cos'].values)
+
                 appendAvgDF =  pd.DataFrame(data=[(str(saveDBname), Game, str(ID), aiGame, avg)], columns = ['P_ID', 'P_Game', 'A_ID', 'A_Game', 'Cos'])
                 avgDF.append(appendAvgDF)
 
@@ -327,13 +378,13 @@ def Total(P_ID):
     SqlDFSave('saveSqlData.db', totalDF, 'TotalAvg')
 
 ### 죽음 데이터
-OverPlayerCos("playerData1.db")
+#OverPlayerCos("playerData1.db")
 
 ### 점프
 JumpPlayerCos("playerData1.db")
 
 ### 포지션
-AllPlayerPosCos("playerData1.db")
+#AllPlayerPosCos("playerData1.db")
 
 ### 종합
-Total('1')
+#Total('1')
