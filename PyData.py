@@ -61,31 +61,31 @@ def AllPlayerPosCos(dbName):
                 # ai 필터링
                 aiFilter = AiTable[AiTable['ID'] == str(ID)]
                 aiFilter = aiFilter[aiFilter['gameNum'] == aiGame]
+                if len(aiFilter) > 0:
+                    playerTablePos = playerFilterTable[['gameNum', 'step', 'xPos', 'yPos']]
+                    aiFilterPos = aiFilter[['ID', 'gameNum', 'xPos', 'yPos']]
 
-                playerTablePos = playerFilterTable[['gameNum', 'step', 'xPos', 'yPos']]
-                aiFilterPos = aiFilter[['ID', 'gameNum', 'xPos', 'yPos']]
+                    playerTablePos.columns = ['P_Game', 'Step', 'P_xPos', 'P_yPos']
+                    aiFilterPos.columns = ['A_ID', 'A_Game', 'A_xPos', 'A_yPos']
 
-                playerTablePos.columns = ['P_Game', 'Step', 'P_xPos', 'P_yPos']
-                aiFilterPos.columns = ['A_ID', 'A_Game', 'A_xPos', 'A_yPos']
+                    # 두 포지션을 합치고 빈자리를 0으로 만듬
+                    contactDF = pd.concat([playerTablePos, aiFilterPos], axis=1)
+                    contactDF = contactDF.fillna(1)
 
-                # 두 포지션을 합치고 빈자리를 0으로 만듬
-                contactDF = pd.concat([playerTablePos, aiFilterPos], axis=1)
-                contactDF = contactDF.fillna(1)
+                    # 유사도 계산
+                    contactDF['Cos'] = cos_sim(contactDF['P_yPos'].values, contactDF['A_yPos'].values)
 
-                # 유사도 계산
-                contactDF['Cos'] = cos_sim(contactDF['P_yPos'].values, contactDF['A_yPos'].values)
+                    contactDF['P_ID'] = str(saveDBname)
+                    contactDF['P_Game'] = Game
+                    contactDF['A_ID'] = str(ID)
+                    contactDF['A_Game'] = aiGame
 
-                contactDF['P_ID'] = str(saveDBname)
-                contactDF['P_Game'] = Game
-                contactDF['A_ID'] = str(ID)
-                contactDF['A_Game'] = aiGame
+                    cosDF.append(contactDF)
 
-                cosDF.append(contactDF)
-
-                avg = np.mean(contactDF['Cos'].values)
-                # 데이터 P - ID, Game, A - ID, Game, Cos
-                appendAvgDF = pd.DataFrame(data=[(str(saveDBname), Game, str(ID), aiGame, avg)],columns = ['P_ID', 'P_Game', 'A_ID', 'A_Game', 'Cos'])
-                avgDF.append(appendAvgDF)
+                    avg = np.mean(contactDF['Cos'].values)
+                    # 데이터 P - ID, Game, A - ID, Game, Cos
+                    appendAvgDF = pd.DataFrame(data=[(str(saveDBname), Game, str(ID), aiGame, avg)],columns = ['P_ID', 'P_Game', 'A_ID', 'A_Game', 'Cos'])
+                    avgDF.append(appendAvgDF)
             #print('플레이어 좌표데이터 Ai ID 처리: ' + str(ID)+ '/' + str(idCount))
         print('플레이어 좌표데이터 처리: ' + str(Game)+ '/' + str(gameCount))
 
@@ -96,7 +96,9 @@ def AllPlayerPosCos(dbName):
 
     avgID_DF = list()
     # 최종
-    for ID in range(1, idCount):
+    checkMaxID = ((A_maxID-1) / A_intervalID) +1
+    for A_ID in range(1, int(checkMaxID)):
+        ID = A_ID * A_intervalID
         aiFilter = avgDF[avgDF['A_ID'] == str(ID)]
         aiFilter = aiFilter.sort_values(by=['Cos'], ascending=False, axis=0)
         aiFilter = aiFilter.drop_duplicates(['P_Game'])
@@ -350,8 +352,12 @@ def JumpPlayerCos(dbName):
     avgDF = avgDF.sort_values(by=['Cos'], ascending=False, axis=0)
 
     avgID_DF = list()
+
+
     # 최종
-    for ID in range(1, idCount):
+    checkMaxID = ((A_maxID-1) / A_intervalID) +1
+    for A_ID in range(1, int(checkMaxID)):
+        ID = A_ID * A_intervalID
         aiFilter = avgDF[avgDF['A_ID'] == str(ID)]
         aiFilter = aiFilter.sort_values(by=['Cos'], ascending=False, axis=0)
         aiFilter = aiFilter.drop_duplicates(['P_Game'])
@@ -379,7 +385,10 @@ def Total(P_ID):
     P_OverFilter = OverDF[OverDF['P_ID'] == str(P_ID)]
     P_JumpFilter = JumpDF[JumpDF['P_ID'] == str(P_ID)]
     P_CosFilter = CosDF[CosDF['P_ID'] == str(P_ID)]
-    for ID in range(1, idCount):
+
+    checkMaxID = ((A_maxID-1) / A_intervalID) +1
+    for A_ID in range(1, int(checkMaxID)):
+        ID = A_ID * A_intervalID
         OverFilter = OverDF[OverDF['A_ID'] == str(ID)]
         JumpFilter = JumpDF[JumpDF['A_ID'] == str(ID)]
         CosFilter = CosDF[CosDF['A_ID'] == str(ID)]
@@ -394,7 +403,7 @@ def Total(P_ID):
     SqlDFSave('saveSqlData.db', totalDF, 'TotalAvg')
 
 ### 죽음 데이터
-OverPlayerCos("playerData1.db")
+#OverPlayerCos("playerData1.db")
 
 ### 점프
 JumpPlayerCos("playerData1.db")
@@ -403,4 +412,4 @@ JumpPlayerCos("playerData1.db")
 AllPlayerPosCos("playerData1.db")
 
 ### 종합
-Total('1')
+#Total('1')
