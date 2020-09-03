@@ -8,8 +8,9 @@ import random
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy import sparse
 
-maxID = 121
-maxGame = 11
+P_maxGame = 11
+A_maxID = 121
+A_maxGame = 11
 
 def cos_sim(v1, v2): 
     dot_product = np.dot(v1, v2)
@@ -46,8 +47,8 @@ def AllPlayerPosCos(dbName):
     saveDBname = saveDBname[1].split('.db')
     saveDBname = int(saveDBname[0])
 
-    idCount = 21
-    gameCount = 11
+    idCount = A_maxID
+    gameCount = A_maxGame
 
     cosDF = list()
     avgDF = list()
@@ -118,18 +119,18 @@ def OverPlayerCos(dbName):
     AiTable = SqlDFLoad("sqlSetML.db", "select ID, gameNum, step, xPos, yPos, overStep from ML WHERE overStep > 0")
 
     P_gameCount = PlayerTable['gameNum'][len(PlayerTable)-2]
-    idCount = 21
-    gameCount = 11
+    idCount = A_maxID
+    gameCount = A_maxGame
     saveDBname = dbName.split('playerData')
     saveDBname = saveDBname[1].split('.db')
     saveDBname = int(saveDBname[0])
 
     # 일단 두개다 필터링
-    P_Filter = OverFilter(PlayerTable)
-    A_Filter = OverFilter(AiTable)
+    #P_Filter = OverFilter(PlayerTable)
+    #A_Filter = OverFilter(AiTable)
 
-    playerTablePos = P_Filter[['gameNum', 'step', 'xPos', 'yPos']]
-    aiFilterPos = A_Filter[['ID', 'gameNum', 'step', 'xPos', 'yPos']]
+    playerTablePos = PlayerTable[['gameNum', 'step', 'xPos', 'yPos']]
+    aiFilterPos = AiTable[['ID', 'gameNum', 'step', 'xPos', 'yPos']]
 
     playerTablePos.columns = ['P_Game', 'P_Step', 'P_xPos', 'P_yPos']
     aiFilterPos.columns = ['A_ID', 'A_Game', 'A_Step', 'A_xPos', 'A_yPos']
@@ -241,8 +242,8 @@ def JumpPlayerCos(dbName):
     AiTable = SqlDFLoad("sqlSetML.db", "select ID, gameNum, step, xPos, yPos, JumpStep from ML WHERE JumpStep > 0")
     
     P_gameCount = PlayerTable['gameNum'][len(PlayerTable)-2]
-    idCount = 21
-    gameCount = 11
+    idCount = A_maxID
+    gameCount = A_maxGame
     saveDBname = dbName.split('playerData')
     saveDBname = saveDBname[1].split('.db')
     saveDBname = int(saveDBname[0])
@@ -359,7 +360,7 @@ def Total(P_ID):
 
     totalDF = list()
 
-    idCount = 21
+    idCount = A_maxID
     P_OverFilter = OverDF[OverDF['P_ID'] == str(P_ID)]
     P_JumpFilter = JumpDF[JumpDF['P_ID'] == str(P_ID)]
     P_CosFilter = CosDF[CosDF['P_ID'] == str(P_ID)]
@@ -378,13 +379,13 @@ def Total(P_ID):
     SqlDFSave('saveSqlData.db', totalDF, 'TotalAvg')
 
 ### 죽음 데이터
-#OverPlayerCos("playerData1.db")
+OverPlayerCos("playerData1.db")
 
 ### 점프
 JumpPlayerCos("playerData1.db")
 
 ### 포지션
-#AllPlayerPosCos("playerData1.db")
+AllPlayerPosCos("playerData1.db")
 
 ### 종합
-#Total('1')
+Total('1')
