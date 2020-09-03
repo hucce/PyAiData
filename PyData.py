@@ -315,35 +315,36 @@ def JumpPlayerCos(dbName):
             aiFilter = playerFilter[playerFilter['A_ID'] == str(ID)]
             for aiGame in range(1, gameCount):
                 aiFilter2 = aiFilter[aiFilter['A_Game'] == aiGame]
-                aiFilter2 = aiFilter2.sort_values(by=['Cos'], ascending=False, axis=0)
-                aiFilter2 = aiFilter2.drop_duplicates(['P_Step'])
+                if len(aiFilter2) > 0:
+                    aiFilter2 = aiFilter2.sort_values(by=['Cos'], ascending=False, axis=0)
+                    aiFilter2 = aiFilter2.drop_duplicates(['P_Step'])
                 
-                # 플레이더 데이터가 AI 데이터보다 적을 경우
-                aiFiltering = aiFilterPos[aiFilterPos['A_ID'] == str(ID)]
-                aiFiltering = aiFiltering[aiFiltering['A_Game'] == aiGame]
-                playerFiltering = playerTablePos[playerTablePos['P_Game'] == Game]
-                lenP = len(playerFiltering)
-                lenA = len(aiFiltering)
-                avg = 0
-                if lenP > lenA:
-                    # 정렬을 반대로 바꾼다
-                    aiFilter2 = aiFilter2.sort_values(by=['Cos'], ascending= True, axis=0)
-                    plusNum = lenP - lenA
-                    for i in range(0, plusNum):
-                        aiFilter2['Cos'].values[i] = 0
-                    avg = np.mean(aiFilter2['Cos'].values)
-                elif lenP < lenA:
-                    # 그 차만큼 허수를 생성
-                    plusNum = lenA - lenP
-                    plusArray = np.zeros(plusNum)
-                    orginArray = aiFilter2['Cos'].values
-                    conNP = np.concatenate((orginArray, plusArray), axis=0)
-                    avg = np.mean(conNP)
-                else:
-                    avg = np.mean(aiFilter2['Cos'].values)
+                    # 플레이더 데이터가 AI 데이터보다 적을 경우
+                    aiFiltering = aiFilterPos[aiFilterPos['A_ID'] == str(ID)]
+                    aiFiltering = aiFiltering[aiFiltering['A_Game'] == aiGame]
+                    playerFiltering = playerTablePos[playerTablePos['P_Game'] == Game]
+                    lenP = len(playerFiltering)
+                    lenA = len(aiFiltering)
+                    avg = 0
+                    if lenP > lenA:
+                        # 정렬을 반대로 바꾼다
+                        aiFilter2 = aiFilter2.sort_values(by=['Cos'], ascending= True, axis=0)
+                        plusNum = lenP - lenA
+                        for i in range(0, plusNum):
+                            aiFilter2['Cos'].values[i] = 0
+                        avg = np.mean(aiFilter2['Cos'].values)
+                    elif lenP < lenA:
+                        # 그 차만큼 허수를 생성
+                        plusNum = lenA - lenP
+                        plusArray = np.zeros(plusNum)
+                        orginArray = aiFilter2['Cos'].values
+                        conNP = np.concatenate((orginArray, plusArray), axis=0)
+                        avg = np.mean(conNP)
+                    else:
+                        avg = np.mean(aiFilter2['Cos'].values)
 
-                appendAvgDF =  pd.DataFrame(data=[(str(saveDBname), Game, str(ID), aiGame, avg)], columns = ['P_ID', 'P_Game', 'A_ID', 'A_Game', 'Cos'])
-                avgDF.append(appendAvgDF)
+                    appendAvgDF =  pd.DataFrame(data=[(str(saveDBname), Game, str(ID), aiGame, avg)], columns = ['P_ID', 'P_Game', 'A_ID', 'A_Game', 'Cos'])
+                    avgDF.append(appendAvgDF)
 
     avgDF = pd.concat(avgDF)
     avgDF = avgDF.sort_values(by=['Cos'], ascending=False, axis=0)
@@ -396,10 +397,10 @@ def Total(P_ID):
 OverPlayerCos("playerData1.db")
 
 ### 점프
-#JumpPlayerCos("playerData1.db")
+JumpPlayerCos("playerData1.db")
 
 ### 포지션
-#AllPlayerPosCos("playerData1.db")
+AllPlayerPosCos("playerData1.db")
 
 ### 종합
-#Total('1')
+Total('1')
