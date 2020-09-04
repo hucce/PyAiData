@@ -14,11 +14,7 @@ A_maxGame = 11
 A_intervalID = 2
 
 def cos_sim(v1, v2): 
-    dot_product = np.dot(v1, v2)
-    l2_norm = (np.sqrt(sum(np.square(v1))) * np.sqrt(sum(np.square(v2))))
-    similarity = dot_product / l2_norm     
-    
-    return similarity
+    return dot(v1, v2)/(norm(v1)*norm(v2))
 
 def SqlDFLoad(file, execute):
   # SQLite DB 연결
@@ -70,11 +66,22 @@ def AllPlayerPosCos(dbName):
 
                     # 두 포지션을 합치고 빈자리를 0으로 만듬
                     contactDF = pd.concat([playerTablePos, aiFilterPos], axis=1)
-                    contactDF = contactDF.fillna(1)
+                    contactDF = contactDF.fillna(0)
+
+                    playerPos = sparse.csr_matrix(contactDF[['P_yPos']].values)
+                    aiPos = sparse.csr_matrix(contactDF[['A_yPos']].values)
+                    # 유사도 계산
+                    similarity_simple_pair = cosine_similarity(playerPos, aiPos)
+                    
+                    tableDF = pd.DataFrame(similarity_simple_pair)
+                    tableDF = np.diag(tableDF.values)
+                    #avg = np.mean(tableDF)
 
                     # 유사도 계산
-                    contactDF['Cos'] = cos_sim(contactDF['P_yPos'].values, contactDF['A_yPos'].values)
+                    #cosTest = cos_sim(contactDF['P_yPos'].values, contactDF['A_yPos'].values)
+                    #contactDF['Cos'] = cos_sim(contactDF['P_yPos'].values, contactDF['A_yPos'].values)
 
+                    contactDF['Cos'] = tableDF
                     contactDF['P_ID'] = str(saveDBname)
                     contactDF['P_Game'] = Game
                     contactDF['A_ID'] = str(ID)
@@ -268,8 +275,8 @@ def JumpPlayerCos(dbName):
     P_Filter = JumpFilter(PlayerTable, 'JumpStep')
     A_Filter = JumpFilter(AiTable, 'JumpStep')
 
-    playerJump = sparse.csr_matrix(P_Filter[['step', 'xPos', 'yPos']].values)
-    aiJump = sparse.csr_matrix(A_Filter[['step', 'xPos', 'yPos']].values)
+    playerJump = sparse.csr_matrix(P_Filter[['xPos', 'yPos']].values)
+    aiJump = sparse.csr_matrix(A_Filter[['xPos', 'yPos']].values)
     # 유사도 계산
     similarity_simple_pair = cosine_similarity(playerJump, aiJump)
                 
@@ -406,7 +413,7 @@ def Total(P_ID):
 #OverPlayerCos("playerData1.db")
 
 ### 점프
-JumpPlayerCos("playerData1.db")
+#JumpPlayerCos("playerData1.db")
 
 ### 포지션
 AllPlayerPosCos("playerData1.db")
