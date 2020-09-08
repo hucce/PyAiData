@@ -64,12 +64,15 @@ def AllPlayerPosCos(dbName):
                     playerTablePos.columns = ['P_Game', 'Step', 'P_xPos', 'P_yPos']
                     aiFilterPos.columns = ['A_ID', 'A_Game', 'A_xPos', 'A_yPos']
 
+                    playerTablePos.reset_index(drop=True, inplace=True)
+                    aiFilterPos.reset_index(drop=True, inplace=True)
+
                     # 두 포지션을 합치고 빈자리를 0으로 만듬
                     contactDF = pd.concat([playerTablePos, aiFilterPos], axis=1)
                     contactDF = contactDF.fillna(0)
 
-                    playerPos = sparse.csr_matrix(contactDF[['P_yPos']].values)
-                    aiPos = sparse.csr_matrix(contactDF[['A_yPos']].values)
+                    playerPos = sparse.csr_matrix(contactDF[['P_xPos', 'P_yPos']].values)
+                    aiPos = sparse.csr_matrix(contactDF[['A_xPos', 'A_yPos']].values)
                     # 유사도 계산
                     similarity_simple_pair = cosine_similarity(playerPos, aiPos)
                     
@@ -78,8 +81,7 @@ def AllPlayerPosCos(dbName):
                     #avg = np.mean(tableDF)
 
                     # 유사도 계산
-                    #cosTest = cos_sim(contactDF['P_yPos'].values, contactDF['A_yPos'].values)
-                    #contactDF['Cos'] = cos_sim(contactDF['P_yPos'].values, contactDF['A_yPos'].values)
+                    #contactDF['Cos'] = cos_sim(contactDF[['P_xPos', 'P_yPos']].values, contactDF[['A_xPos' , 'A_yPos']].values)
 
                     contactDF['Cos'] = tableDF
                     contactDF['P_ID'] = str(saveDBname)
@@ -410,13 +412,13 @@ def Total(P_ID):
     SqlDFSave('saveSqlData.db', totalDF, 'TotalAvg')
 
 ### 죽음 데이터
-#OverPlayerCos("playerData1.db")
+OverPlayerCos("playerData1.db")
 
 ### 점프
-#JumpPlayerCos("playerData1.db")
+JumpPlayerCos("playerData1.db")
 
 ### 포지션
-AllPlayerPosCos("playerData1.db")
+#AllPlayerPosCos("playerData1.db")
 
 ### 종합
-#Total('1')
+Total('1')
