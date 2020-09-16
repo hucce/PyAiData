@@ -120,6 +120,7 @@ def AllPlayerPosCos(dbName):
                 gameAvg.append(appendAvgDF)
 
     avgGameDF = pd.concat(gameAvg)
+    avgGameDF = SortByP_GameCos(avgGameDF)
 
     avgID_DF = list()
     # 최종
@@ -198,8 +199,8 @@ def OverPlayerCos(dbName):
     for P_Game in range(1, P_gameCount):
         plyerFilter = cosDF[cosDF['P_Game'] == P_Game]
         for A_ID in range(1, int(checkMaxID)):
+            ID = A_ID * A_intervalID
             if len(plyerFilter) > 0:
-                ID = A_ID * A_intervalID
                 aiFilter = plyerFilter[plyerFilter['A_ID'] == str(ID)]
                 if len(aiFilter) > 0:
                     aiFilter = aiFilter.sort_values(by=['Cos'], ascending=False, axis=0)
@@ -215,6 +216,7 @@ def OverPlayerCos(dbName):
                 gameAvg.append(appendAvgDF)
 
     avgGameDF = pd.concat(gameAvg)
+    avgGameDF = SortByP_GameCos(avgGameDF)
 
     avgDF = list()
     # 이제 검사된 값으로 반대로 가장 비슷한 학습량을 찾아냄
@@ -402,8 +404,8 @@ def JumpPlayerCos(dbName):
     for P_Game in range(1, P_gameCount):
         plyerFilter = avgDF[avgDF['P_Game'] == P_Game]
         for A_ID in range(1, int(checkMaxID)):
+            ID = A_ID * A_intervalID
             if len(plyerFilter) > 0:
-                ID = A_ID * A_intervalID
                 aiFilter = plyerFilter[plyerFilter['A_ID'] == str(ID)]
                 if len(aiFilter) > 0:
                     aiFilter = aiFilter.sort_values(by=['Cos'], ascending=False, axis=0)
@@ -419,6 +421,7 @@ def JumpPlayerCos(dbName):
                 gameAvg.append(appendAvgDF)
 
     avgGameDF = pd.concat(gameAvg)
+    avgGameDF = SortByP_GameCos(avgGameDF)
 
     avgID_DF = list()
     # 최종
@@ -456,9 +459,9 @@ def TotalGame(P_ID):
     checkMaxID = ((A_maxID-1) / A_intervalID) +1
 
     for P_Game in range(1, P_gameCount):
-        P_OverGameFilter = P_OverFilter[P_OverFilter['P_Game'] == str(P_gameCount)]
-        P_JumpGameFilter = P_JumpFilter[P_JumpFilter['P_Game'] == str(P_gameCount)]
-        P_CosGameFilter = P_CosFilter[P_CosFilter['P_Game'] == str(P_gameCount)]
+        P_OverGameFilter = P_OverFilter[P_OverFilter['P_Game'] == P_Game]
+        P_JumpGameFilter = P_JumpFilter[P_JumpFilter['P_Game'] == P_Game]
+        P_CosGameFilter = P_CosFilter[P_CosFilter['P_Game'] == P_Game]
         for A_ID in range(1, int(checkMaxID)):
             ID = A_ID * A_intervalID
             OverFilter = P_OverGameFilter[P_OverGameFilter['A_ID'] == str(ID)]
@@ -470,8 +473,8 @@ def TotalGame(P_ID):
             totalGameDF.append(appendAvgDF)
 
     totalGameDF = pd.concat(totalGameDF)
-    totalGameDF = totalGameDF.sort_values(by=['Cos'], ascending=False, axis=0)
-    avgGameDF = avgGameDF.sort_values(ascending=False, axis=0, key= lambda x: (x['P_Game'], x['Cos']))
+    totalGameDF = SortByP_GameCos(totalGameDF)
+    
     print('종합 게임완료')
     SqlDFSave('saveSqlData.db', totalGameDF, 'TotalGameAvg')
 
@@ -527,6 +530,17 @@ def AllPlayersData(min, max):
     for player in range(min, max+1):
         AllPlayerData(str(player))
 
+def SortByP_GameCos(tableDF):
+    sortList = list()
+    for game in range(1, P_maxGame):
+        filterGame = tableDF[tableDF['P_Game'] == game]
+        filterGame = filterGame.sort_values(by=['Cos'], ascending=False, axis=0)
+        sortList.append(filterGame)
+    
+    sortTable = pd.concat(sortList)
+    return sortTable
+
+
 ### 죽음 데이터
 #OverPlayerCos("playerData1.db")
 
@@ -536,9 +550,9 @@ def AllPlayersData(min, max):
 ### 포지션
 #AllPlayerPosCos("playerData1.db")
 
-#TotalGame('1')
+TotalGame('1')
 
 ### 종합
 #Total('1')
 
-AllPlayerData('1')
+#AllPlayerData('1')
