@@ -103,9 +103,26 @@ def AllPlayerPosCos(dbName):
     # 정렬
     avgDF = avgDF.sort_values(by=['Cos'], ascending=False, axis=0)
 
+    # 플레이어 게임을 기준으로 해서 유사도 분석
+    gameAvg = list()
+    checkMaxID = ((A_maxID-1) / A_intervalID) +1
+    for P_Game in range(1, P_gameCount+1):
+        plyerFilter = avgDF[avgDF['P_Game'] == P_Game]
+        if len(plyerFilter) > 0:
+            for A_ID in range(1, int(checkMaxID)):
+                ID = A_ID * A_intervalID
+                aiFilter = plyerFilter[plyerFilter['A_ID'] == str(ID)]
+                aiFilter = aiFilter.sort_values(by=['Cos'], ascending=False, axis=0)
+                aiFilter = aiFilter.drop_duplicates(['P_Game'])
+                avg = np.mean(aiFilter['Cos'].values)
+                appendAvgDF =  pd.DataFrame(data=[(str(saveDBname), str(ID), P_Game, avg)], columns = ['P_ID', 'P_Game', 'A_ID', 'Cos'])
+                gameAvg.append(appendAvgDF)
+
+    avgGameDF = pd.concat(gameAvg)
+    avgGameDF = avgGameDF.sort_values(by=['Cos'], ascending=False, axis=0)
+
     avgID_DF = list()
     # 최종
-    checkMaxID = ((A_maxID-1) / A_intervalID) +1
     for A_ID in range(1, int(checkMaxID)):
         ID = A_ID * A_intervalID
         aiFilter = avgDF[avgDF['A_ID'] == str(ID)]
@@ -123,6 +140,7 @@ def AllPlayerPosCos(dbName):
     # 모든 작업이 끝나면 저장
     SqlDFSave('saveSqlData.db', cosDF, 'PosCos')
     SqlDFSave('saveSqlData.db', avgDF, 'PosAvg')
+    SqlDFSave('saveSqlData.db', avgGameDF, 'PosGameAvg')
     SqlDFSave('saveSqlData.db', avgID_DF, 'PosIDAvg')
 
 def OverPlayerCos(dbName):    
@@ -136,10 +154,6 @@ def OverPlayerCos(dbName):
     saveDBname = dbName.split('playerData')
     saveDBname = saveDBname[1].split('.db')
     saveDBname = int(saveDBname[0])
-
-    # 일단 두개다 필터링
-    #P_Filter = OverFilter(PlayerTable)
-    #A_Filter = OverFilter(AiTable)
 
     P_Filter = PlayerTable
     A_Filter = AiTable
@@ -179,10 +193,26 @@ def OverPlayerCos(dbName):
     cosDF = pd.concat(cosDF)
     cosDF = cosDF[['P_ID', 'P_Game', 'P_Step', 'P_xPos', 'P_yPos', 'A_ID', 'A_Game', 'A_Step', 'A_xPos', 'A_yPos', 'Cos']]
 
+    gameAvg = list()
+    checkMaxID = ((A_maxID-1) / A_intervalID) +1
+    for P_Game in range(1, P_gameCount+1):
+        plyerFilter = cosDF[cosDF['P_Game'] == P_Game]
+        if len(plyerFilter) > 0:
+            for A_ID in range(1, int(checkMaxID)):
+                ID = A_ID * A_intervalID
+                aiFilter = plyerFilter[plyerFilter['A_ID'] == str(ID)]
+                aiFilter = aiFilter.sort_values(by=['Cos'], ascending=False, axis=0)
+                aiFilter = aiFilter.drop_duplicates(['P_Game'])
+                avg = np.mean(aiFilter['Cos'].values)
+                appendAvgDF =  pd.DataFrame(data=[(str(saveDBname), str(ID), P_Game, avg)], columns = ['P_ID', 'P_Game', 'A_ID', 'Cos'])
+                gameAvg.append(appendAvgDF)
+
+    avgGameDF = pd.concat(gameAvg)
+    avgGameDF = avgGameDF.sort_values(by=['Cos'], ascending=False, axis=0)
+
     avgDF = list()
     # 이제 검사된 값으로 반대로 가장 비슷한 학습량을 찾아냄
     # 평균을 계산할때 Ai와 플레이어의 횟수를 검사한다.
-    checkMaxID = ((A_maxID-1) / A_intervalID) +1
     for A_ID in range(1, int(checkMaxID)):
         ID = A_ID * A_intervalID
         # 먼저 필터한다.
@@ -229,6 +259,7 @@ def OverPlayerCos(dbName):
     print('죽음 처리 완료')
     # 모든 작업이 끝나면 DF로 변환 후
     SqlDFSave('saveSqlData.db', cosDF, 'OverCos')
+    SqlDFSave('saveSqlData.db', avgGameDF, 'OverGameAvg')
     SqlDFSave('saveSqlData.db', avgDF, 'OverAvg')
 
 def OverFilter(OverDF):
@@ -360,11 +391,25 @@ def JumpPlayerCos(dbName):
     avgDF = pd.concat(avgDF)
     avgDF = avgDF.sort_values(by=['Cos'], ascending=False, axis=0)
 
-    avgID_DF = list()
-
-
-    # 최종
+    gameAvg = list()
     checkMaxID = ((A_maxID-1) / A_intervalID) +1
+    for P_Game in range(1, P_gameCount+1):
+        plyerFilter = avgDF[avgDF['P_Game'] == P_Game]
+        if len(plyerFilter) > 0:
+            for A_ID in range(1, int(checkMaxID)):
+                ID = A_ID * A_intervalID
+                aiFilter = plyerFilter[plyerFilter['A_ID'] == str(ID)]
+                aiFilter = aiFilter.sort_values(by=['Cos'], ascending=False, axis=0)
+                aiFilter = aiFilter.drop_duplicates(['P_Game'])
+                avg = np.mean(aiFilter['Cos'].values)
+                appendAvgDF =  pd.DataFrame(data=[(str(saveDBname), str(ID), P_Game, avg)], columns = ['P_ID', 'P_Game', 'A_ID', 'Cos'])
+                gameAvg.append(appendAvgDF)
+
+    avgGameDF = pd.concat(gameAvg)
+    avgGameDF = avgGameDF.sort_values(by=['Cos'], ascending=False, axis=0)
+
+    avgID_DF = list()
+    # 최종
     for A_ID in range(1, int(checkMaxID)):
         ID = A_ID * A_intervalID
         aiFilter = avgDF[avgDF['A_ID'] == str(ID)]
@@ -381,12 +426,48 @@ def JumpPlayerCos(dbName):
     # 모든 작업이 끝나면 DF로 변환 후
     SqlDFSave('saveSqlData.db', cosDF, 'JumpCos')
     SqlDFSave('saveSqlData.db', avgDF, 'JumpAvg')
+    SqlDFSave('saveSqlData.db', avgGameDF, 'JumpGameAvg')
     SqlDFSave('saveSqlData.db', avgID_DF, 'JumpIDAvg')
+
+def TotalGame(P_ID):
+    OverGameDF = SqlDFLoad('saveSqlData.db', "select P_ID, P_Game, A_ID, Cos from OverGameAvg")
+    JumpGameDF = SqlDFLoad('saveSqlData.db', "select P_ID, P_Game, A_ID, Cos from JumpGameAvg")
+    CosGameDF = SqlDFLoad('saveSqlData.db', "select P_ID, P_Game, A_ID, Cos from PosGameAvg")
+
+    P_gameCount = CosDF['P_Game'][len(CosDF)-2]
+    
+    P_OverFilter = OverDF[OverDF['P_ID'] == str(P_ID)]
+    P_JumpFilter = JumpDF[JumpDF['P_ID'] == str(P_ID)]
+    P_CosFilter = CosDF[CosDF['P_ID'] == str(P_ID)]
+
+    totalGameDF = list()
+    checkMaxID = ((A_maxID-1) / A_intervalID) +1
+
+    for P_Game in range(1, P_gameCount):
+        P_OverGameFilter = P_OverFilter[P_OverFilter['P_Game'] == str(P_gameCount)]
+        P_JumpGameFilter = P_JumpFilter[P_JumpFilter['P_Game'] == str(P_gameCount)]
+        P_CosGameFilter = P_CosFilter[P_CosFilter['P_Game'] == str(P_gameCount)]
+        for A_ID in range(1, int(checkMaxID)):
+            ID = A_ID * A_intervalID
+            OverFilter = P_OverGameFilter[P_OverGameFilter['A_ID'] == str(ID)]
+            JumpFilter = P_JumpGameFilter[P_JumpGameFilter['A_ID'] == str(ID)]
+            CosFilter = P_CosGameFilter[P_CosGameFilter['A_ID'] == str(ID)]
+            conDF = pd.concat([OverFilter, JumpFilter, CosFilter], axis = 0)
+            avg = np.mean(conDF['Cos'].values)
+            appendAvgDF =  pd.DataFrame(data=[(str(P_ID), ID, avg)], columns = ['P_ID', 'A_ID', 'Cos'])
+            totalDF.append(appendAvgDF)
+
+    totalGameDF = pd.concat(totalDF)
+    totalGameDF = totalDF.sort_values(by=['Cos'], ascending=False, axis=0)
+
+    SqlDFSave('saveSqlData.db', totalGameDF, 'TotalAvg')
 
 def Total(P_ID):
     OverDF = SqlDFLoad('saveSqlData.db', "select P_ID, A_ID, Cos from OverAvg")
     JumpDF = SqlDFLoad('saveSqlData.db', "select P_ID, A_ID, Cos from JumpIDAvg")
     CosDF = SqlDFLoad('saveSqlData.db', "select P_ID, A_ID, Cos from PosIDAvg")
+
+    totalGameDF = list()
 
     totalDF = list()
 
@@ -409,6 +490,7 @@ def Total(P_ID):
     totalDF = pd.concat(totalDF)
     totalDF = totalDF.sort_values(by=['Cos'], ascending=False, axis=0)
     print('종합 완료')
+    
     SqlDFSave('saveSqlData.db', totalDF, 'TotalAvg')
 
 ### 죽음 데이터
@@ -418,7 +500,7 @@ OverPlayerCos("playerData1.db")
 JumpPlayerCos("playerData1.db")
 
 ### 포지션
-#AllPlayerPosCos("playerData1.db")
+AllPlayerPosCos("playerData1.db")
 
 ### 종합
 Total('1')
