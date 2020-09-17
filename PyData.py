@@ -304,7 +304,7 @@ def JumpPlayerCos(dbName):
     # A의 자료를 B의 자료에서 확인하여 가장 높은 평균 유사도의 게임을 찾아낸다.
     PlayerTable = SqlDFLoad(dbName, "select ID, gameNum, step, xPos, yPos, JumpStep from ML WHERE JumpStep > 0")
     AiTable = SqlDFLoad("sqlSetML.db", "select ID, gameNum, step, xPos, yPos, JumpStep from ML WHERE JumpStep > 0")
-    
+
     P_gameCount = P_maxGame
     idCount = A_maxID
     gameCount = A_maxGame
@@ -534,7 +534,9 @@ def SortByP_GameCos(tableDF):
     sortList = list()
     for game in range(1, P_maxGame):
         filterGame = tableDF[tableDF['P_Game'] == game]
-        filterGame = filterGame.sort_values(by=['Cos'], ascending=False, axis=0)
+        filterGame['A_ID'] = filterGame['A_ID'].astype(int)
+        filterGame = filterGame.sort_values(by=['Cos', 'A_ID'], ascending=[False, True], axis=0)
+        filterGame['A_ID'] = filterGame['A_ID'].astype(str)
         sortList.append(filterGame)
     
     sortTable = pd.concat(sortList)
@@ -550,9 +552,9 @@ def SortByP_GameCos(tableDF):
 ### 포지션
 #AllPlayerPosCos("playerData1.db")
 
-TotalGame('1')
+#TotalGame('1')
 
 ### 종합
 #Total('1')
 
-#AllPlayerData('1')
+AllPlayerData('1')
