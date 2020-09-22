@@ -9,9 +9,9 @@ from sklearn.metrics.pairwise import cosine_similarity
 from scipy import sparse
 
 P_maxGame = 11
-A_maxID = 121
+A_maxID = 15
 A_maxGame = 11
-A_intervalID = 2
+A_intervalID = 1
 
 def cos_sim(v1, v2): 
     return dot(v1, v2)/(norm(v1)*norm(v2))
@@ -31,7 +31,7 @@ def SqlDFSave(file, tableDF, tableName):
   conn = sqlite3.connect("content/" + str(file))
 
   # if_exists = 'replace' , if_exists = 'append'
-  tableDF.to_sql(tableName, conn, if_exists='append', index=False)
+  tableDF.to_sql(tableName, conn, if_exists='replace', index=False)
 
   conn.close()
 
@@ -529,6 +529,7 @@ def AllPlayerData(P_ID):
 def AllPlayersData(min, max):
     for player in range(min, max+1):
         AllPlayerData(str(player))
+        print("플레이어 완료: " + str(player))
 
 def SortByP_GameCos(tableDF):
     sortList = list()
@@ -542,6 +543,17 @@ def SortByP_GameCos(tableDF):
     sortTable = pd.concat(sortList)
     return sortTable
 
+def PlayerDataCon(min, max):
+    playerDataList = list()
+    for player in range(min, max+1):
+        dbName = 'playerData' + str(player) + '.db'
+        PlayerTable = SqlDFLoad(dbName, "select ID, gameNum, step, clearStep, JumpStep, OverStep, xPos, yPos, time from ML")
+        PlayerTable['ID'] = str(player)
+        playerDataList.append(PlayerTable)
+    
+    sortTable = pd.concat(playerDataList)
+    print('플레이어 데이터 합치기')
+    SqlDFSave('sqlSetML.db', sortTable, 'ML')
 
 ### 죽음 데이터
 #OverPlayerCos("playerData1.db")
@@ -557,4 +569,8 @@ def SortByP_GameCos(tableDF):
 ### 종합
 #Total('1')
 
-AllPlayerData('1')
+#AllPlayerData('1')
+
+#PlayerDataCon(1, 14)
+
+AllPlayersData(1, 14)
