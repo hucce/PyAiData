@@ -31,19 +31,22 @@ def SqlDFSave(file, tableDF, tableName):
   conn = sqlite3.connect("content/" + str(file))
 
   # if_exists = 'replace' , if_exists = 'append'
-  tableDF.to_sql(tableName, conn, if_exists='replace', index=False)
+  tableDF.to_sql(tableName, conn, if_exists='append', index=False)
 
   conn.close()
 
-def AllPlayerPosCos(dbName):
+def AllPlayerPosCos(PtoA, dbName):
+    fileName = "playerData" + dbName + ".db"
+
     # A의 자료를 B의 자료에서 확인하여 가장 높은 평균 유사도의 게임을 찾아낸다.
-    PlayerTable = SqlDFLoad(dbName, "select ID, gameNum, step, xPos, yPos from ML")
+    PlayerTable = SqlDFLoad(fileName, "select ID, gameNum, step, xPos, yPos from ML")
     AiTable = SqlDFLoad("sqlSetML.db", "select ID, gameNum, step, xPos, yPos from ML")
+    # PtoP라면
+    if PtoA == False:
+        AiTable = SqlDFLoad("sqlSetML.db", "select ID, gameNum, step, xPos, yPos from ML WHERE ID != " + '"' + dbName + '"')
 
     P_gameCount = PlayerTable['gameNum'][len(PlayerTable)-2]
-    saveDBname = dbName.split('playerData')
-    saveDBname = saveDBname[1].split('.db')
-    saveDBname = int(saveDBname[0])
+    saveDBname = int(dbName)
 
     idCount = A_maxID
     gameCount = A_maxGame
@@ -144,17 +147,21 @@ def AllPlayerPosCos(dbName):
     SqlDFSave('saveSqlData.db', avgGameDF, 'PosGameAvg')
     SqlDFSave('saveSqlData.db', avgID_DF, 'PosIDAvg')
 
-def OverPlayerCos(dbName):    
+def OverPlayerCos(PtoA, dbName):   
+    fileName = "playerData" + dbName + ".db"
+
     # A의 자료를 B의 자료에서 확인하여 가장 높은 평균 유사도의 게임을 찾아낸다.
-    PlayerTable = SqlDFLoad(dbName, "select ID, gameNum, step, xPos, yPos, overStep from ML WHERE overStep > 0")
+    PlayerTable = SqlDFLoad(fileName, "select ID, gameNum, step, xPos, yPos, overStep from ML WHERE overStep > 0")
     AiTable = SqlDFLoad("sqlSetML.db", "select ID, gameNum, step, xPos, yPos, overStep from ML WHERE overStep > 0")
+
+    # PtoP라면
+    if PtoA == False:
+        AiTable = SqlDFLoad("sqlSetML.db", "select ID, gameNum, step, xPos, yPos, overStep from ML WHERE overStep > 0 and ID != " + '"' + dbName + '"')
 
     P_gameCount = P_maxGame
     idCount = A_maxID
     gameCount = A_maxGame
-    saveDBname = dbName.split('playerData')
-    saveDBname = saveDBname[1].split('.db')
-    saveDBname = int(saveDBname[0])
+    saveDBname = int(dbName)
 
     P_Filter = PlayerTable
     A_Filter = AiTable
@@ -300,17 +307,21 @@ def JumpFilter(jumpDF, col):
     
     return jumpDF[jumpDF[col] > 0]
 
-def JumpPlayerCos(dbName):
+def JumpPlayerCos(PtoA, dbName):
+    fileName = "playerData" + dbName + ".db"
+
     # A의 자료를 B의 자료에서 확인하여 가장 높은 평균 유사도의 게임을 찾아낸다.
-    PlayerTable = SqlDFLoad(dbName, "select ID, gameNum, step, xPos, yPos, JumpStep from ML WHERE JumpStep > 0")
+    PlayerTable = SqlDFLoad(fileName, "select ID, gameNum, step, xPos, yPos, JumpStep from ML WHERE JumpStep > 0")
     AiTable = SqlDFLoad("sqlSetML.db", "select ID, gameNum, step, xPos, yPos, JumpStep from ML WHERE JumpStep > 0")
+
+    # PtoP라면
+    if PtoA == False:
+        AiTable = SqlDFLoad("sqlSetML.db", "select ID, gameNum, step, xPos, yPos, JumpStep from ML WHERE JumpStep > 0 and ID != " + '"' + dbName + '"')
 
     P_gameCount = P_maxGame
     idCount = A_maxID
     gameCount = A_maxGame
-    saveDBname = dbName.split('playerData')
-    saveDBname = saveDBname[1].split('.db')
-    saveDBname = int(saveDBname[0])
+    saveDBname = int(dbName)
 
     # 일단 두개다 필터링
     P_Filter = JumpFilter(PlayerTable, 'JumpStep')
@@ -509,26 +520,24 @@ def Total(P_ID):
     
     SqlDFSave('saveSqlData.db', totalDF, 'TotalAvg')
 
-def AllPlayerData(P_ID):
-    fileName = "playerData" + P_ID + ".db"
-
+def AllPlayerData(PtoA, P_ID):
     ### 죽음 데이터
-    OverPlayerCos(fileName)
+    OverPlayerCos(PtoA, P_ID)
 
     ### 점프
-    JumpPlayerCos(fileName)
+    JumpPlayerCos(PtoA, P_ID)
 
     ### 포지션
-    AllPlayerPosCos(fileName)
+    AllPlayerPosCos(PtoA, P_ID)
 
     TotalGame(P_ID)
 
     ### 종합
     Total(P_ID)
 
-def AllPlayersData(min, max):
+def AllPlayersData(PtoA, min, max):
     for player in range(min, max+1):
-        AllPlayerData(str(player))
+        AllPlayerData(PtoA, str(player))
         print("플레이어 완료: " + str(player))
 
 def SortByP_GameCos(tableDF):
@@ -556,7 +565,7 @@ def PlayerDataCon(min, max):
     SqlDFSave('sqlSetML.db', sortTable, 'ML')
 
 ### 죽음 데이터
-#OverPlayerCos("playerData1.db")
+#OverPlayerCos(False, "1")
 
 ### 점프
 #JumpPlayerCos("playerData1.db")
@@ -573,4 +582,4 @@ def PlayerDataCon(min, max):
 
 #PlayerDataCon(1, 14)
 
-AllPlayersData(1, 14)
+AllPlayersData(False, 1, 14)
