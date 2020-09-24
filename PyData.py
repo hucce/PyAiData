@@ -8,6 +8,7 @@ import random
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy import sparse
 
+P_maxID = 15
 P_maxGame = 11
 A_maxID = 15
 A_maxGame = 11
@@ -31,7 +32,7 @@ def SqlDFSave(file, tableDF, tableName):
   conn = sqlite3.connect("content/" + str(file))
 
   # if_exists = 'replace' , if_exists = 'append'
-  tableDF.to_sql(tableName, conn, if_exists='append', index=False)
+  tableDF.to_sql(tableName, conn, if_exists='replace', index=False)
 
   conn.close()
 
@@ -628,7 +629,6 @@ def JumpPlayerCos(PtoA, dbName):
             appendAvgDF =  pd.DataFrame(data=[(str(saveDBname), str(ID), avg)], columns = ['P_ID', 'A_ID', 'Cos'])
             avgID_DF.append(appendAvgDF)
 
-
     avgID_DF = pd.concat(avgID_DF)
     avgID_DF = avgID_DF.sort_values(by=['Cos'], ascending=False, axis=0)
     print('점프 처리 완료')
@@ -748,7 +748,6 @@ def TotalContact():
     
     SqlDFSave('saveSqlData.db', totalDF, 'TotalContact')
 
-
 def AllPlayerData(PtoA, P_ID):
     ### 죽음 데이터
     OverPlayerCos(PtoA, P_ID)
@@ -793,14 +792,86 @@ def PlayerDataCon(min, max):
     print('플레이어 데이터 합치기')
     SqlDFSave('sqlSetML.db', sortTable, 'ML')
 
+# 플레이어끼리 비교한 데이터로 사람들끼리 그룹만들기
+def PlayersGrouping():
+    totalConDF = SqlDFLoad('saveSqlData.db', "select First_P_ID, First_A_ID, First_Cos, Second_P_ID, Second_A_ID, Second_Cos, Cos from TotalContact")
+
+    totalDF = list()
+
+    # 
+    for P_ID in range(1, 15):
+        FilterP_ID = totalConDF[totalConDF['First_P_ID'] == str(P_ID)]
+
+
+
+
+        first_P_ID = totalAvgDF['P_ID'][firstP_ID]
+        first_A_ID = totalAvgDF['A_ID'][firstP_ID]
+        first_Cos = totalAvgDF['Cos'][firstP_ID]
+        FilterA_ID = totalAvgDF[totalAvgDF['P_ID'] == str(first_A_ID)]
+        FilterA_ID = FilterA_ID[FilterA_ID['A_ID'] == int(first_P_ID)]
+        second_Cos = FilterA_ID['Cos'].values[0]
+        avg = (first_Cos + second_Cos) / 2
+        appendAvgDF =  pd.DataFrame(data=[(first_P_ID, first_A_ID, first_Cos, first_A_ID, first_P_ID, second_Cos, avg)], columns = ['First_P_ID', 'First_A_ID', 'First_Cos', 'Second_P_ID', 'Second_A_ID', 'Second_Cos', 'Cos'])
+        totalDF.append(appendAvgDF)
+
+    totalDF = pd.concat(totalDF)
+    totalDF = totalDF.sort_values(by=['Cos'], ascending=False, axis=0)
+
+    print('종합 완료')
+    
+def AvgDuplicates(avgDF):
+    DF_List = list()
+
+    checkMaxID = ((A_maxID-1) / A_intervalID) +1
+    for P_ID in range(1, 15):
+        FilterTable = avgDF[avgDF['P_ID'] == str(P_ID)]
+        if len(FilterTable) > 0:
+            for A_ID in range(1, int(checkMaxID)):
+                ID = A_ID * A_intervalID
+                FilterTable2 = FilterTable[FilterTable['A_ID'] == str(ID)]
+                aGameList = list()
+                pGameList = list()
+                if len(FilterTable2) > 0:
+                    for P_Game in range(1, P_maxGame):
+                        FilterTable3 = FilterTable2
+                        for filterP_Game in pGameList:
+                            FilterTable3 = FilterTable3[FilterTable3['P_Game'] != filterP_Game]
+                        for filterA_Game in aGameList:
+                            FilterTable3 = FilterTable3[FilterTable3['A_Game'] != filterA_Game]
+                        
+                        DF_List.append(FilterTable3.iloc[0:1])
+                        pGameList.append(FilterTable3['P_Game'].values[0])
+                        aGameList.append(FilterTable3['A_Game'].values[0])
+    
+    DF = pd.concat(DF_List)
+    return DF
+
+def AvgsRe():
+    fileName = 'saveSqlData.db'
+    JumpAvg = SqlDFLoad(fileName, "select P_ID, P_Game, A_ID, A_Game, Cos from JumpAvg")
+    JumpDF = AvgDuplicates(JumpAvg)
+    
+    PosAvg = SqlDFLoad(fileName, "select P_ID, P_Game, A_ID, A_Game, Cos from PosAvg")
+    PosDF = AvgDuplicates(PosAvg)
+
+    SqlDFSave('saveSqlData.db', PosDF, 'PosIDAvg')
+    SqlDFSave('saveSqlData.db', JumpDF, 'JumpIDAvg')
+
+def AllTotalCal(PtoA):
+    for P_ID in range(1, P_maxID):
+        Total(PtoA, str(P_ID))
+
+AvgsRe()
+
 ### 죽음 데이터
 #OverPlayerCos(False, "1")
 
 ### 점프
-#JumpPlayerCos(False, "1")
+#JumpPlayerCos(False, "10")
 
 ### 포지션
-#AllPlayerPosCos("playerData1.db")
+#AllPlayerPosCos(False, "1")
 
 #TotalGame('1')
 
@@ -813,4 +884,4 @@ def PlayerDataCon(min, max):
 
 #AllPlayersData(False, 1, 14)
 
-TotalContact()
+#TotalContact()
