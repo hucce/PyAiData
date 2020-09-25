@@ -10,9 +10,9 @@ from scipy import sparse
 
 P_maxID = 15
 P_maxGame = 11
-A_maxID = 15
+A_maxID = 121
 A_maxGame = 11
-A_intervalID = 1
+A_intervalID = 2
 
 def cos_sim(v1, v2): 
     return dot(v1, v2)/(norm(v1)*norm(v2))
@@ -855,12 +855,12 @@ def AvgDup(PtoA, dbName, avgDF):
             if dbName != str(ID):
                 aiFilter = conDF[conDF['A_ID'] == str(ID)]
                 avg = np.mean(aiFilter['Cos'].values)
-                appendAvgDF =  pd.DataFrame(data=[(dbName, str(A_ID), avg)], columns = ['P_ID', 'A_ID', 'Cos'])
+                appendAvgDF =  pd.DataFrame(data=[(dbName, str(ID), avg)], columns = ['P_ID', 'A_ID', 'Cos'])
                 totalList.append(appendAvgDF)
         else:
             aiFilter = conDF[conDF['A_ID'] == str(ID)]
             avg = np.mean(aiFilter['Cos'].values)
-            appendAvgDF =  pd.DataFrame(data=[(dbName, str(A_ID), avg)], columns = ['P_ID', 'A_ID', 'Cos'])
+            appendAvgDF =  pd.DataFrame(data=[(dbName, str(ID), avg)], columns = ['P_ID', 'A_ID', 'Cos'])
             totalList.append(appendAvgDF)
     
     totalDF = pd.concat(totalList)
@@ -868,21 +868,40 @@ def AvgDup(PtoA, dbName, avgDF):
 
     return totalDF
 
-def AvgsRe():
+def AvgsJump(PtoA, min, max):
+    fileName = 'saveSqlData.db'
+    
+    PosAvgDF = SqlDFLoad(fileName, "select P_ID, P_Game, A_ID, A_Game, Cos from JumpAvg")
+
+    posList = list()
+
+    for P_ID in range(min, max):
+        filterDF = PosAvgDF[PosAvgDF['P_ID'] == str(P_ID)]
+        PosFilterDF = AvgDup(PtoA, str(P_ID), filterDF)
+        print('플레이어 데이터 수정중: ' + str(P_ID))
+        posList.append(PosFilterDF)
+        
+    PosDF = pd.concat(posList)
+
+    print('평균 점프 재설정')
+    SqlDFSave('saveSqlData.db', PosDF, 'JumpIDAvg')
+
+def AvgsPos(PtoA, min, max):
     fileName = 'saveSqlData.db'
     
     PosAvgDF = SqlDFLoad(fileName, "select P_ID, P_Game, A_ID, A_Game, Cos from PosAvg")
 
     posList = list()
 
-    for P_ID in range(1, P_maxID):
+    for P_ID in range(min, max):
         filterDF = PosAvgDF[PosAvgDF['P_ID'] == str(P_ID)]
-        PosFilterDF = AvgDup(False, str(P_ID), filterDF)
+        PosFilterDF = AvgDup(PtoA, str(P_ID), filterDF)
         print('플레이어 데이터 수정중: ' + str(P_ID))
         posList.append(PosFilterDF)
         
     PosDF = pd.concat(posList)
 
+    print('평균 위치 재설정')
     SqlDFSave('saveSqlData.db', PosDF, 'PosIDAvg')
 
 def AvgsReOver():
@@ -902,20 +921,102 @@ def AvgsReOver():
 
     SqlDFSave('saveSqlData.db', PosDF, 'OverAvg')
 
-def AllTotalCal(PtoA):
-    for P_ID in range(1, P_maxID):
+def AllTotalCal(PtoA, min, max):
+    for P_ID in range(min, max):
         Total(PtoA, str(P_ID))
+        print('종합 데이터 수정중: ' + str(P_ID))
 
-"""
-for ID in range(1, P_maxID):
-    AllPlayerPosCos(False, str(ID))
-"""
+def TotalGroupA_Check(groupList):
+    fileName = 'saveSqlData.db'
+    
+    avgDF = SqlDFLoad(fileName, "select P_ID, A_ID, Cos from TotalAvg")
 
-#AllTotalCal(False)
+    totalList = list()
 
-#Total(False, '14')
+    checkMaxID = ((A_maxID-1) / A_intervalID) +1
+    for groupNum in range(0, len(groupList)):
+        # 먼저 해당하는 그룹끼리 필터
+        tempDFList = list()
+        for P_ID in groupList[groupNum]:
+            filterDF = avgDF[avgDF['P_ID'] == str(P_ID)]
+            tempDFList.append(filterDF)
+        tempDF = pd.concat(tempDFList)
+        # 이제 A_ID 별로 필터링 한 후 평균을 만든다.
+        for A_ID in range(1, int(checkMaxID)):
+            ID = A_ID * A_intervalID
+            filterDF2 = tempDF[tempDF['A_ID'] == ID]
+            avg = np.mean(filterDF2['Cos'].values)
+            # 그룹, A_ID, Cos
+            appendAvgDF =  pd.DataFrame(data=[(str(groupNum + 1), str(ID), avg)], columns = ['GroupName', 'A_ID', 'Cos'])
+            totalList.append(appendAvgDF)
 
-TotalContact()
+    totalDF = pd.concat(totalList)
+    totalDF = totalDF.sort_values(by=['Cos'], ascending=False, axis=0)
+
+    print('그룹 평균')
+    SqlDFSave('saveSqlData.db', totalDF, 'GroupCos')
+
+def TotalGamesCal(min, max):
+    OverDF = SqlDFLoad('saveSqlData.db', "select P_ID, A_ID, Cos from OverCos")
+    JumpDF = SqlDFLoad('saveSqlData.db', "select P_ID, A_ID, Cos from JumpIDAvg")
+    CosDF = SqlDFLoad('saveSqlData.db', "select P_ID, A_ID, Cos from PosIDAvg")
+
+    totalGameDF = list()
+
+    totalDF = list()
+
+    idCount = A_maxID
+    checkMaxID = ((A_maxID-1) / A_intervalID) +1
+
+    for P_ID in range(min, max):
+        P_OverFilter = OverDF[OverDF['P_ID'] == str(P_ID)]
+        P_JumpFilter = JumpDF[JumpDF['P_ID'] == str(P_ID)]
+        P_CosFilter = CosDF[CosDF['P_ID'] == str(P_ID)]
+        for A_ID in range(1, int(checkMaxID)):
+            ID = A_ID * A_intervalID
+            if PtoA == False:
+                if P_ID != str(ID):
+                    OverIDFilter = P_OverFilter[P_OverFilter['A_ID'] == str(ID)]
+                    JumpIDFilter = P_JumpFilter[P_JumpFilter['A_ID'] == ID]
+                    CosIDFilter = P_CosFilter[P_CosFilter['A_ID'] == ID]
+                    for game in range(1, A_maxGame):
+
+
+
+                    conDF = pd.concat([OverFilter, JumpFilter, CosFilter], axis = 0)
+
+                    avg = np.mean(conDF['Cos'].values)
+                    appendAvgDF =  pd.DataFrame(data=[(str(P_ID), ID, avg)], columns = ['P_ID', 'A_ID', 'Cos'])
+                    totalDF.append(appendAvgDF)
+            else:
+                OverFilter = P_OverFilter[P_OverFilter['A_ID'] == str(ID)]
+                JumpFilter = P_JumpFilter[P_JumpFilter['A_ID'] == str(ID)]
+                CosFilter = P_CosFilter[P_CosFilter['A_ID'] == str(ID)]
+                conDF = pd.concat([OverFilter, JumpFilter, CosFilter], axis = 0)
+                avg = np.mean(conDF['Cos'].values)
+                appendAvgDF =  pd.DataFrame(data=[(str(P_ID), ID, avg)], columns = ['P_ID', 'A_ID', 'Cos'])
+                totalDF.append(appendAvgDF)
+
+    totalDF = pd.concat(totalDF)
+    totalDF = totalDF.sort_values(by=['Cos'], ascending=False, axis=0)
+    print('종합 완료')
+    
+    SqlDFSave('saveSqlData.db', totalDF, 'TotalAvg')
+
+TotalGroupA_Check([(2,6), (8,4,13), (5,11)])
+
+#AvgsJump(True, 2, 15)
+#AvgsPos(True, 2, 15)
+
+#JumpPlayerCos(True, '1')
+
+#for ID in range(2, P_maxID):
+#    JumpPlayerCos(True, str(ID))
+
+#Total(True, 1)
+#AllTotalCal(True, 2, 15)
+
+#TotalContact()
 
 ### 죽음 데이터
 #OverPlayerCos(False, "1")
