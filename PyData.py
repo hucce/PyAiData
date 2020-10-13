@@ -33,7 +33,7 @@ def SqlDFSave(file, tableDF, tableName):
   conn = sqlite3.connect("content/" + str(file))
 
   # if_exists = 'replace' , if_exists = 'append'
-  tableDF.to_sql(tableName, conn, if_exists='replace', index=False)
+  tableDF.to_sql(tableName, conn, if_exists='append', index=False)
 
   conn.close()
 
@@ -1079,6 +1079,14 @@ def OverIDGame(PtoA):
     #avgDF = avgDF.sort_values(by=['Cos'], ascending=False, axis=0)
     print('죽음 처리 완료')
     SqlDFSave('saveSqlData.db', avgDF, 'OverIDAvg')
+
+def FilterPoscos():
+    for P_ID in range(11, 15):
+        ppDF = SqlDFLoad('aiCosData.db', 'select P_ID, P_Game, Step, P_xPos, P_yPos, A_ID, A_Game, A_xPos, A_yPos, Cos from PosCos WHERE P_ID = \"' + str(P_ID) + '\"')
+        SqlDFSave('Poscos' + str(P_ID) + '.db' , ppDF, 'PosCos')
+        print('필터: ' + str(P_ID))
+
+FilterPoscos()
 
 #AllTotalCal(True, 2,15)
 
