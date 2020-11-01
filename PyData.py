@@ -6,14 +6,16 @@ import pandas as pd
 import sqlite3
 import random
 from sklearn.metrics.pairwise import cosine_similarity
-#from scipy import spars
+from scipy.sparse import csr_matrix
 #import csv
 
-P_maxID = 15
+P_maxID = 121
 P_maxGame = 11
-A_maxID = 15
+A_maxID = 121
 A_maxGame = 11
-A_intervalID = 1
+A_intervalID = 2
+
+# 0 PtoA, 1 PtoP, 2 AtoA
 
 def cos_sim(v1, v2): 
     return dot(v1, v2)/(norm(v1)*norm(v2))
@@ -33,7 +35,7 @@ def SqlDFSave(file, tableDF, tableName):
   conn = sqlite3.connect("content/" + str(file))
 
   # if_exists = 'replace' , if_exists = 'append'
-  tableDF.to_sql(tableName, conn, if_exists='append', index=False)
+  tableDF.to_sql(tableName, conn, if_exists='replace', index=False)
 
   conn.close()
 
@@ -44,8 +46,11 @@ def AllPlayerPosCos(PtoA, dbName):
     PlayerTable = SqlDFLoad(fileName, "select ID, gameNum, step, xPos, yPos from ML")
     AiTable = SqlDFLoad("sqlSetML.db", "select ID, gameNum, step, xPos, yPos from ML")
     # PtoP라면
-    if PtoA == False:
+    if PtoA == 1:
         AiTable = SqlDFLoad("sqlSetML.db", "select ID, gameNum, step, xPos, yPos from ML WHERE ID != " + '"' + dbName + '"')
+    elif PtoA == 2:
+        PlayerTable = AiTable
+        PlayerTable = PlayerTable[PlayerTable['ID'] == dbName]
 
     P_gameCount = PlayerTable['gameNum'][len(PlayerTable)-2]
     saveDBname = int(dbName)
@@ -59,7 +64,7 @@ def AllPlayerPosCos(PtoA, dbName):
     for Game in range(1, P_gameCount+1):
         playerFilterTable = PlayerTable[PlayerTable['gameNum'] == Game]
         for ID in range(1, idCount):
-            if PtoA == False:
+            if PtoA == 1 or PtoA == 2:
                 if dbName != str(ID):
                     for aiGame in range(1, gameCount):
                         # ai 필터링
@@ -79,8 +84,8 @@ def AllPlayerPosCos(PtoA, dbName):
                             contactDF = pd.concat([playerTablePos, aiFilterPos], axis=1)
                             contactDF = contactDF.fillna(0)
 
-                            playerPos = sparse.csr_matrix(contactDF[['P_xPos', 'P_yPos']].values)
-                            aiPos = sparse.csr_matrix(contactDF[['A_xPos', 'A_yPos']].values)
+                            playerPos = csr_matrix(contactDF[['P_xPos', 'P_yPos']].values)
+                            aiPos = csr_matrix(contactDF[['A_xPos', 'A_yPos']].values)
                             # 유사도 계산
                             similarity_simple_pair = cosine_similarity(playerPos, aiPos)
                     
@@ -122,8 +127,8 @@ def AllPlayerPosCos(PtoA, dbName):
                         contactDF = pd.concat([playerTablePos, aiFilterPos], axis=1)
                         contactDF = contactDF.fillna(0)
 
-                        playerPos = sparse.csr_matrix(contactDF[['P_xPos', 'P_yPos']].values)
-                        aiPos = sparse.csr_matrix(contactDF[['A_xPos', 'A_yPos']].values)
+                        playerPos = csr_matrix(contactDF[['P_xPos', 'P_yPos']].values)
+                        aiPos = csr_matrix(contactDF[['A_xPos', 'A_yPos']].values)
                         # 유사도 계산
                         similarity_simple_pair = cosine_similarity(playerPos, aiPos)
                     
@@ -162,7 +167,7 @@ def AllPlayerPosCos(PtoA, dbName):
         if len(plyerFilter) > 0:
             for A_ID in range(1, int(checkMaxID)):
                 ID = A_ID * A_intervalID
-                if PtoA == False:
+                if PtoA == 1 or PtoA == 2:
                     if dbName != str(ID):
                         aiFilter = plyerFilter[plyerFilter['A_ID'] == str(ID)]
                         aiFilter = aiFilter.sort_values(by=['Cos'], ascending=False, axis=0)
@@ -200,8 +205,11 @@ def OverPlayerCos(PtoA, dbName):
     AiTable = SqlDFLoad("sqlSetML.db", "select ID, gameNum, step, xPos, yPos, overStep from ML WHERE overStep > 0")
 
     # PtoP라면
-    if PtoA == False:
+    if PtoA == 1:
         AiTable = SqlDFLoad("sqlSetML.db", "select ID, gameNum, step, xPos, yPos, overStep from ML WHERE overStep > 0 and ID != " + '"' + dbName + '"')
+    elif PtoA == 2:
+        PlayerTable = AiTable
+        PlayerTable = PlayerTable[PlayerTable['ID'] == dbName]
 
     P_gameCount = P_maxGame
     idCount = A_maxID
@@ -218,8 +226,8 @@ def OverPlayerCos(PtoA, dbName):
     aiFilterPos.columns = ['A_ID', 'A_Game', 'A_Step', 'A_xPos', 'A_yPos']
 
     # 형변환
-    playerOver = sparse.csr_matrix(P_Filter[['xPos', 'yPos']].values)
-    aiOver = sparse.csr_matrix(A_Filter[['xPos', 'yPos']].values)
+    playerOver = csr_matrix(P_Filter[['xPos', 'yPos']].values)
+    aiOver = csr_matrix(A_Filter[['xPos', 'yPos']].values)
 
     # 유사도 계산
     similarity_simple_pair = cosine_similarity(playerOver, aiOver)
@@ -237,8 +245,9 @@ def OverPlayerCos(PtoA, dbName):
         inDF = pd.concat([aiFilterPos, input], axis=1)
         inDF.columns = ['A_ID', 'A_Game', 'A_Step', 'A_xPos', 'A_yPos', 'Cos']
         inDF['P_ID'] = str(saveDBname)
-        for col in playerTablePos.columns:
-            inDF[col] = playerTablePos.get_value(i, col)
+        for col in range(0, len(playerTablePos.columns)):
+            input = playerTablePos.iat[i, col]
+            inDF[playerTablePos.columns[col]] = input
         # 정렬
         inDF.sort_values(by=['Cos'], ascending=False, axis=0)
         cosDF.append(inDF)
@@ -252,7 +261,7 @@ def OverPlayerCos(PtoA, dbName):
         plyerFilter = cosDF[cosDF['P_Game'] == P_Game]
         for A_ID in range(1, int(checkMaxID)):
             ID = A_ID * A_intervalID
-            if PtoA == False:
+            if PtoA == 1 or PtoA == 2:
                 if dbName != str(ID):
                     if len(plyerFilter) > 0:
                         aiFilter = plyerFilter[plyerFilter['A_ID'] == str(ID)]
@@ -292,7 +301,7 @@ def OverPlayerCos(PtoA, dbName):
     # 평균을 계산할때 Ai와 플레이어의 횟수를 검사한다.
     for A_ID in range(1, int(checkMaxID)):
         ID = A_ID * A_intervalID
-        if PtoA == False:
+        if PtoA == 1 or PtoA == 2:
             if dbName != str(ID):
                 # 먼저 필터한다.
                 A_filterDF = cosDF[cosDF['A_ID'] == str(ID)]
@@ -377,8 +386,8 @@ def OverPlayerCos(PtoA, dbName):
     print('죽음 처리 완료')
     # 모든 작업이 끝나면 DF로 변환 후
     SqlDFSave('saveSqlData.db', cosDF, 'OverCos')
-    SqlDFSave('saveSqlData.db', avgGameDF, 'OverGameAvg')
-    SqlDFSave('saveSqlData.db', avgDF, 'OverAvg')
+    SqlDFSave('saveSqlData.db', avgGameDF, 'OverAvg')
+    SqlDFSave('saveSqlData.db', avgDF, 'OverIDAvg')
 
 def OverFilter(OverDF):
     maxID = OverDF['ID'][len(OverDF)-2]
@@ -403,12 +412,12 @@ def JumpFilter(jumpDF, col):
     for i in jumpDF.index:
         if i+1 <= len(jumpDF.index)-1:
             # 인덱스, 컬럼
-            value1 = jumpDF.get_value(i, col) +1 
-            value2 = jumpDF.get_value(i+1, col)
+            value1 = jumpDF.iat[i, col] +1 
+            value2 = jumpDF.iat[i+1, col]
             if value1 == value2:
-                jumpDF.set_value(i, col, 0)
+                jumpDF.iat[i, col] = 0
     
-    return jumpDF[jumpDF[col] > 0]
+    return jumpDF[jumpDF[jumpDF.columns[col]] > 0]
 
 def JumpPlayerCos(PtoA, dbName):
     fileName = "playerData" + dbName + ".db"
@@ -418,8 +427,11 @@ def JumpPlayerCos(PtoA, dbName):
     AiTable = SqlDFLoad("sqlSetML.db", "select ID, gameNum, step, xPos, yPos, JumpStep from ML WHERE JumpStep > 0")
 
     # PtoP라면
-    if PtoA == False:
+    if PtoA == 1:
         AiTable = SqlDFLoad("sqlSetML.db", "select ID, gameNum, step, xPos, yPos, JumpStep from ML WHERE JumpStep > 0 and ID != " + '"' + dbName + '"')
+    elif PtoA == 2:
+        PlayerTable = AiTable
+        PlayerTable = PlayerTable[PlayerTable['ID'] == dbName]
 
     P_gameCount = P_maxGame
     idCount = A_maxID
@@ -427,11 +439,12 @@ def JumpPlayerCos(PtoA, dbName):
     saveDBname = int(dbName)
 
     # 일단 두개다 필터링
-    P_Filter = JumpFilter(PlayerTable, 'JumpStep')
-    A_Filter = JumpFilter(AiTable, 'JumpStep')
+    # JumpStep = 5
+    P_Filter = JumpFilter(PlayerTable, 5)
+    A_Filter = JumpFilter(AiTable, 5)
 
-    playerJump = sparse.csr_matrix(P_Filter[['xPos', 'yPos']].values)
-    aiJump = sparse.csr_matrix(A_Filter[['xPos', 'yPos']].values)
+    playerJump = csr_matrix(P_Filter[['xPos', 'yPos']].values)
+    aiJump = csr_matrix(A_Filter[['xPos', 'yPos']].values)
     # 유사도 계산
     similarity_simple_pair = cosine_similarity(playerJump, aiJump)
                 
@@ -459,8 +472,8 @@ def JumpPlayerCos(PtoA, dbName):
         inDF = pd.concat([aiFilterPos, input], axis=1)
         inDF.columns = ['A_ID', 'A_Game', 'A_Step', 'A_xPos', 'A_yPos', 'Cos']
         inDF['P_ID'] = saveDBname
-        for col in playerTablePos.columns:
-            inDF[col] = playerTablePos.get_value(i, col)
+        for col in range(0, len(playerTablePos.columns)):
+            inDF[playerTablePos.columns[col]] = playerTablePos.iat[i, col]
         # 정렬
         inDF = inDF.sort_values(by=['Cos'], ascending=False, axis=0)
         inDF = inDF[['P_ID', 'P_Game', 'P_Step', 'P_xPos', 'P_yPos', 'A_ID', 'A_Game', 'A_Step', 'A_xPos', 'A_yPos', 'Cos']]
@@ -477,7 +490,7 @@ def JumpPlayerCos(PtoA, dbName):
         if len(playerFilter) > 0:
             # 실제 같은 step이 하나도록 수정한다.
             for ID in range(1, idCount):
-                if PtoA == False:
+                if PtoA == 1 or PtoA == 2:
                     if dbName != str(ID):
                         aiFilter = playerFilter[playerFilter['A_ID'] == str(ID)]
                         for aiGame in range(1, gameCount):
@@ -567,7 +580,7 @@ def JumpPlayerCos(PtoA, dbName):
         plyerFilter = avgDF[avgDF['P_Game'] == P_Game]
         for A_ID in range(1, int(checkMaxID)):
             ID = A_ID * A_intervalID
-            if PtoA == False:
+            if PtoA == 1 or PtoA == 2:
                 if dbName != str(ID):
                     if len(plyerFilter) > 0:
                         aiFilter = plyerFilter[plyerFilter['A_ID'] == str(ID)]
@@ -652,7 +665,7 @@ def TotalGame(PtoA, P_ID):
         P_CosGameFilter = P_CosFilter[P_CosFilter['P_Game'] == P_Game]
         for A_ID in range(1, int(checkMaxID)):
             ID = A_ID * A_intervalID
-            if PtoA == False:
+            if PtoA == 1 or PtoA == 2:
                 if P_ID != str(ID):
                     OverFilter = P_OverGameFilter[P_OverGameFilter['A_ID'] == str(ID)]
                     JumpFilter = P_JumpGameFilter[P_JumpGameFilter['A_ID'] == str(ID)]
@@ -816,7 +829,7 @@ def AvgDup(PtoA, dbName, avgDF):
     checkMaxID = ((A_maxID-1) / A_intervalID) +1
     for A_ID in range(1, int(checkMaxID)):
         ID = A_ID * A_intervalID
-        if PtoA == False:
+        if PtoA == 1 or PtoA == 2:
             if dbName != str(ID):
                 FilterTable2 = firstDF[firstDF['A_ID'] == str(ID)]
                 aGameList = list()
@@ -1007,6 +1020,100 @@ def PosCosGames():
     PosAvg = SqlDFLoad('aiCosData.db', "select P_ID, P_Game, Step, P_xPos, P_yPos, A_ID, A_Game, A_xPos, A_yPos, Cos from PosCos WHERE P_ID = '14' and P_Game = 10")
     PosAvg.to_csv('content/p2.csv', sep=',', na_rep='NaN')
 
+def OverCheck(PtoA, min, max):
+    OverDF = SqlDFLoad('saveSqlData.db', "select P_ID, P_Game, P_Step, P_xPos, P_yPos, A_ID, A_Game, A_Step, A_xPos, A_yPos, Cos from OverCos")
+    avgDF = list()
+
+    checkMaxID = ((A_maxID-1) / A_intervalID) +1
+    for P_ID in range(min, max):
+        cosDF = OverDF[OverDF['P_ID'] == str(P_ID)]
+        for A_ID in range(1, int(checkMaxID)):
+            ID = A_ID * A_intervalID
+            if PtoA == False:
+                if str(P_ID) != str(ID):
+                    # 먼저 필터한다.
+                    A_filterDF = cosDF[cosDF['A_ID'] == str(ID)]
+                    # 데이터가 있어야 정리로 넘어감
+                    if len(A_filterDF) > 0:
+                        # 유사도 순으로 정렬1
+                        A_filterDF = A_filterDF.sort_values(by=['Cos'], ascending=False, axis=0)
+                        # 정렬 된 유사도 중 1등만 빼고 삭제한다.
+                        A_dupFilterDF = A_filterDF.drop_duplicates(['P_Step', 'P_Game'])
+                        A_filterCountDF = A_filterDF.drop_duplicates(['A_Step', 'A_Game'])
+                        # 플레이더 데이터가 AI 데이터보다 적을 경우
+                        lenP = len(A_dupFilterDF)
+                        lenA = len(A_filterCountDF)
+                        avg = 0
+                        if lenP > lenA:
+                            # 정렬을 반대로 바꾼다
+                            A_dupFilterDF = A_dupFilterDF.sort_values(by=['Cos'], ascending= True, axis=0)
+                            plusNum = lenP - lenA
+                            for i in range(0, plusNum):
+                                A_dupFilterDF['Cos'].values[i] = 0
+                            avg = np.mean(A_filterDF['Cos'].values)
+                        elif lenP < lenA:
+                            # 그 차만큼 허수를 생성
+                            plusNum = lenA - lenP
+                            plusArray = np.zeros(plusNum)
+                            orginArray = A_dupFilterDF['Cos'].values
+                            conNP = np.concatenate((orginArray, plusArray), axis=0)
+                            avg = np.mean(conNP)
+                        else:
+                            avg = np.mean(A_dupFilterDF['Cos'].values)
+        
+                        appendAvgDF =  pd.DataFrame(data=[(str(P_ID), str(ID), avg)], columns = ['P_ID', 'A_ID', 'Cos'])
+                        avgDF.append(appendAvgDF)
+                    # 해당하는 아이디에 데이터가 없다면 모두 성공한 것 0으로 데이터를 넣어준다.
+                    else:
+                        #데이터가 없으면 
+                        avg = 0
+                        appendAvgDF =  pd.DataFrame(data=[(str(P_ID), str(ID), avg)], columns = ['P_ID', 'A_ID', 'Cos'])
+                        avgDF.append(appendAvgDF)
+            else:
+                # 먼저 필터한다.
+                A_filterDF = cosDF[cosDF['A_ID'] == str(ID)]
+                # 데이터가 있어야 정리로 넘어감
+                if len(A_filterDF) > 0:
+                    # 유사도 순으로 정렬1
+                    A_filterDF = A_filterDF.sort_values(by=['Cos'], ascending=False, axis=0)
+                    # 정렬 된 유사도 중 1등만 빼고 삭제한다.
+                    A_dupFilterDF = A_filterDF.drop_duplicates(['P_Step', 'P_Game'])
+                    A_filterCountDF = A_filterDF.drop_duplicates(['A_Step', 'A_Game'])
+                    # 플레이더 데이터가 AI 데이터보다 적을 경우
+                    lenP = len(A_dupFilterDF)
+                    lenA = len(A_filterCountDF)
+                    avg = 0
+                    if lenP > lenA:
+                        # 정렬을 반대로 바꾼다
+                        A_dupFilterDF = A_filterDF.sort_values(by=['Cos'], ascending= True, axis=0)
+                        plusNum = lenP - lenA
+                        for i in range(0, plusNum):
+                            A_dupFilterDF['Cos'].values[i] = 0
+                        avg = np.mean(A_filterDF['Cos'].values)
+                    elif lenP < lenA:
+                        # 그 차만큼 허수를 생성
+                        plusNum = lenA - lenP
+                        plusArray = np.zeros(plusNum)
+                        orginArray = A_dupFilterDF['Cos'].values
+                        conNP = np.concatenate((orginArray, plusArray), axis=0)
+                        avg = np.mean(conNP)
+                    else:
+                        avg = np.mean(A_filterDF['Cos'].values)
+        
+                    appendAvgDF =  pd.DataFrame(data=[(str(P_ID), str(ID), avg)], columns = ['P_ID', 'A_ID', 'Cos'])
+                    avgDF.append(appendAvgDF)
+                # 해당하는 아이디에 데이터가 없다면 모두 성공한 것 0으로 데이터를 넣어준다.
+                else:
+                    #데이터가 없으면 
+                    avg = 0
+                    appendAvgDF =  pd.DataFrame(data=[(str(P_ID), str(ID), avg)], columns = ['P_ID', 'A_ID', 'Cos'])
+                    avgDF.append(appendAvgDF)
+        print('죽음 완료 : ' + str(P_ID))
+
+    avgDF = pd.concat(avgDF)
+    avgDF = avgDF.sort_values(by=['Cos'], ascending=False, axis=0)
+    SqlDFSave('saveSqlData.db', avgDF, 'OverIDAvg')
+
 def OverGame(PtoA):
     OverDF = SqlDFLoad('saveSqlData.db', "select P_ID, P_Game, A_ID, A_Game, Cos from OverCos")
 
@@ -1086,48 +1193,13 @@ def FilterPoscos():
         SqlDFSave('Poscos' + str(P_ID) + '.db' , ppDF, 'PosCos')
         print('필터: ' + str(P_ID))
 
-FilterPoscos()
-
-#AllTotalCal(True, 2,15)
-
-#OverGame(False)
-#OverIDGame(False)
+def AtoA():
+    checkMaxID = ((A_maxID-1) / A_intervalID) +1
+    for P_ID in range(1, int(checkMaxID)):
+        ID = P_ID * A_intervalID
+        AllPlayerData(2, str(ID))
 
 #TotalGroupA_Check([(2,6), (8,4,13), (5,11)])
+#AllPlayersData(2, 1, 121)
 
-#PosCosGames()
-
-#AvgsJump(True, 2, 15)
-#AvgsPos(True, 2, 15)
-
-#JumpPlayerCos(True, '1')
-
-#for ID in range(2, P_maxID):
-#    JumpPlayerCos(True, str(ID))
-
-#Total(True, 1)
-#AllTotalCal(True, 2, 15)
-
-#TotalContact()
-
-### 죽음 데이터
-#OverPlayerCos(False, "1")
-
-### 점프
-#JumpPlayerCos(False, "10")
-
-### 포지션
-#AllPlayerPosCos(False, "1")
-
-#TotalGame('1')
-
-### 종합
-#Total('1')
-
-#AllPlayerData(False, '1')
-
-#PlayerDataCon(1, 14)
-
-#AllPlayersData(False, 1, 14)
-
-#TotalContact()
+AtoA()
