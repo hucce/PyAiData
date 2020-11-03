@@ -386,7 +386,7 @@ def OverPlayerCos(PtoA, dbName):
     print('죽음 처리 완료')
     # 모든 작업이 끝나면 DF로 변환 후
     SqlDFSave('saveSqlData.db', cosDF, 'OverCos')
-    SqlDFSave('saveSqlData.db', avgGameDF, 'OverAvg')
+    SqlDFSave('saveSqlData.db', avgGameDF, 'OverGameAvg')
     SqlDFSave('saveSqlData.db', avgDF, 'OverIDAvg')
 
 def OverFilter(OverDF):
@@ -764,7 +764,7 @@ def AllPlayerData(PtoA, P_ID):
     ### 포지션
     AllPlayerPosCos(PtoA, P_ID)
 
-    TotalGame(PtoA, P_ID)
+    #TotalGame(PtoA, P_ID)
 
     ### 종합
     Total(PtoA, P_ID)
