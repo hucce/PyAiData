@@ -199,13 +199,16 @@ def AllPlayerPosCos(PtoA, dbName):
 
 def OverPlayerCos(PtoA, dbName):   
     fileName = "playerData" + dbName + ".db"
+    PlayerTable = []
 
     # A의 자료를 B의 자료에서 확인하여 가장 높은 평균 유사도의 게임을 찾아낸다.
-    PlayerTable = SqlDFLoad(fileName, "select ID, gameNum, step, xPos, yPos, overStep from ML WHERE overStep > 0")
     AiTable = SqlDFLoad("sqlSetML.db", "select ID, gameNum, step, xPos, yPos, overStep from ML WHERE overStep > 0")
 
     # PtoP라면
-    if PtoA == 1:
+    if PtoA == 0:
+        PlayerTable = SqlDFLoad(fileName, "select ID, gameNum, step, xPos, yPos, overStep from ML WHERE overStep > 0")
+    elif PtoA == 1:
+        PlayerTable = SqlDFLoad(fileName, "select ID, gameNum, step, xPos, yPos, overStep from ML WHERE overStep > 0")
         AiTable = SqlDFLoad("sqlSetML.db", "select ID, gameNum, step, xPos, yPos, overStep from ML WHERE overStep > 0 and ID != " + '"' + dbName + '"')
     elif PtoA == 2:
         PlayerTable = AiTable
@@ -454,11 +457,15 @@ def JumpPlayerCos(PtoA, dbName):
     fileName = "playerData" + dbName + ".db"
 
     # A의 자료를 B의 자료에서 확인하여 가장 높은 평균 유사도의 게임을 찾아낸다.
-    PlayerTable = SqlDFLoad(fileName, "select ID, gameNum, step, xPos, yPos, JumpStep from ML WHERE JumpStep > 0")
+    PlayerTable = []
+    
     AiTable = SqlDFLoad("sqlSetML.db", "select ID, gameNum, step, xPos, yPos, JumpStep from ML WHERE JumpStep > 0")
 
     # PtoP라면
-    if PtoA == 1:
+    if PtoA == 0:
+        PlayerTable = SqlDFLoad(fileName, "select ID, gameNum, step, xPos, yPos, JumpStep from ML WHERE JumpStep > 0")
+    elif PtoA == 1:
+        PlayerTable = SqlDFLoad(fileName, "select ID, gameNum, step, xPos, yPos, JumpStep from ML WHERE JumpStep > 0")
         AiTable = SqlDFLoad("sqlSetML.db", "select ID, gameNum, step, xPos, yPos, JumpStep from ML WHERE JumpStep > 0 and ID != " + '"' + dbName + '"')
     elif PtoA == 2:
         PlayerTable = AiTable
@@ -1227,7 +1234,7 @@ def FilterPoscos():
 def AtoA(min, max):
     min = min / A_intervalID
     max = max / A_intervalID
-    for P_ID in range(min, max+1):
+    for P_ID in range(int(min), int(max)+1):
         ID = P_ID * A_intervalID
         AllPlayerData(2, str(ID))
 
@@ -1499,7 +1506,7 @@ def TotalSelfSimilarity(ID):
 
 #TotalGroupA_Check([(2,6), (8,4,13), (5,11)])
 #AllPlayersData(2, 1, 121)
-#AtoA()
+AtoA(16, 120)
 
 ### 포지션
-AllPlayerPosCos(2, '4')
+#AllPlayerPosCos(2, '4')
