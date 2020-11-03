@@ -1304,12 +1304,13 @@ def PosSelfSimilarity(PtoA, ID):
     dbName = "Ai_"
     if PtoA == 1:
         dbName = "Human_"
+    
+    print('위치 완료')
+    SqlDFSave(dbName + 'SS' + ID + '.db', conDF, 'PosCos')
+    SqlDFSave(dbName + 'SS.db', avgDF, 'PosAvg')
+    SqlDFSave(dbName + 'SS.db', avgIDDF, 'PosIDAvg')
 
-    SqlDFSave('SS' + ID + '.db', conDF, 'PosCos')
-    SqlDFSave('SS.db', avgDF, 'PosAvg')
-    SqlDFSave('SS.db', avgIDDF, 'PosIDAvg')
-
-def JumpSelfSimilarity(ID):
+def JumpSelfSimilarity(PtoA, ID):
     table = SqlDFLoad("aiDatas.db", "select ID, gameNum, step, xPos, yPos, JumpStep from ML WHRER ID == " + ID + " and JumpStep > 0")
     if PtoA == 1:
         table = SqlDFLoad("playerDatas.db", "select ID, gameNum, step, xPos, yPos, JumpStep from ML WHRER ID == " + ID + " and JumpStep > 0")
@@ -1376,17 +1377,18 @@ def JumpSelfSimilarity(ID):
     dbName = "Ai_"
     if PtoA == 1:
         dbName = "Human_"
+    
+    print('점프 완료')
+    SqlDFSave(dbName + 'SS' + ID + '.db', conDF, 'JumpCos')
+    SqlDFSave(dbName + 'SS.db', avgDF, 'JumpAvg')
+    SqlDFSave(dbName + 'SS.db', avgIDDF, 'JumpIDAvg')
 
-    SqlDFSave('SS' + ID + '.db', conDF, 'PosCos')
-    SqlDFSave('SS.db', avgDF, 'PosAvg')
-    SqlDFSave('SS.db', avgIDDF, 'PosIDAvg')
-
-def OverSelfSimilarity(ID):
-    table = SqlDFLoad("sqlSetML.db", "select ID, gameNum, step, xPos, yPos from ML")
+def OverSelfSimilarity(PtoA, ID):
     table = SqlDFLoad("aiDatas.db", "select ID, gameNum, step, xPos, yPos, overStep from ML WHRER ID == " + ID + " and overStep > 0")
     if PtoA == 1:
         table = SqlDFLoad("playerDatas.db", "select ID, gameNum, step, xPos, yPos, overStep from ML WHRER ID == " + ID + " and overStep > 0")
 
+    IDdf = table
     avgDF = list()
     cosDF = list()
     for P_Game in range(1, P_maxGame):
@@ -1447,62 +1449,59 @@ def OverSelfSimilarity(ID):
     dbName = "Ai_"
     if PtoA == 1:
         dbName = "Human_"
-
-    SqlDFSave('SS' + ID + '.db', conDF, 'PosCos')
-    SqlDFSave('SS.db', avgDF, 'PosAvg')
-    SqlDFSave('SS.db', avgIDDF, 'PosIDAvg')
-
-def TotalSelfSimilarity(ID):
-    table = SqlDFLoad("sqlSetML.db", "select ID, gameNum, step, xPos, yPos, overStep from ML WHERE overStep > 0")
-    avgDF = list()
-    for P_ID in range(1, P_maxID):
-        IDdf = table[table['ID'] == str(IDdf)]
-        for P_Game in range(1, P_maxGame):
-            a_gameDF = IDdf[IDdf['gameNum'] == P_Game]
-            for A_Game in range(1, P_maxGame):
-                if P_Game != A_Game:
-                    b_gameDF = IDdf[IDdf['gameNum'] == A_Game]
-                    if len(aiFilter) > 0:
-                        playerTablePos = a_gameDF[['gameNum', 'step', 'xPos', 'yPos']]
-                        aiFilterPos = b_gameDF[['gameNum', 'xPos', 'yPos']]
-
-                        playerTablePos.columns = ['P_Game', 'Step', 'P_xPos', 'P_yPos']
-                        aiFilterPos.columns = ['A_Game', 'A_xPos', 'A_yPos']
-
-                        playerTablePos.reset_index(drop=True, inplace=True)
-                        aiFilterPos.reset_index(drop=True, inplace=True)
-
-                        # 두 포지션을 합치고 빈자리를 0으로 만듬
-                        contactDF = pd.concat([playerTablePos, aiFilterPos], axis=1)
-                        contactDF = contactDF.fillna(0)
-
-                        playerPos = csr_matrix(contactDF[['P_xPos', 'P_yPos']].values)
-                        aiPos = csr_matrix(contactDF[['A_xPos', 'A_yPos']].values)
-                        # 유사도 계산
-                        similarity_simple_pair = cosine_similarity(playerPos, aiPos)
-                    
-                        tableDF = pd.DataFrame(similarity_simple_pair)
-                        tableDF = np.diag(tableDF.values)
-
-                        contactDF['Cos'] = tableDF
-                        contactDF['P_ID'] = str(P_ID)
-                        contactDF['P_Game'] = P_Game
-                        contactDF['A_Game'] = A_Game
-
-                        cosDF.append(contactDF)
-
-                        avg = np.mean(contactDF['Cos'].values)
-                        # 데이터 P - ID, Game, A - ID, Game, Cos
-                        appendAvgDF = pd.DataFrame(data=[(str(P_ID), P_Game, A_Game, avg)],columns = ['P_ID', 'P_Game', 'A_Game', 'Cos'])
-                        avgDF.append(appendAvgDF)
-                    else:
-                        appendAvgDF = pd.DataFrame(data=[(str(P_ID), P_Game, A_Game, 0)],columns = ['P_ID', 'P_Game', 'A_Game', 'Cos'])
-                        avgDF.append(appendAvgDF)
     
-    avgDF = pd.concat(avgDF)
-    # 정렬
-    avgDF = avgDF.sort_values(by=['Cos'], ascending=False, axis=0)
-    SqlDFSave('PSS.db', avgID_DF, 'PosIDAvg')
+    print('죽음 완료')
+    SqlDFSave(dbName + 'SS' + ID + '.db', conDF, 'OverCos')
+    SqlDFSave(dbName + 'SS.db', avgDF, 'OverAvg')
+    SqlDFSave(dbName + 'SS.db', avgIDDF, 'OverIDAvg')
+
+def TotalSelfSimilarity(PtoA, ID):
+    
+    dbName = "Ai_"
+    if PtoA == 1:
+        dbName = "Human_"
+    
+    overDF = SqlDFLoad(dbName +'SS.db', "select P_ID, P_Game, A_Game, Cos from OverAvg WHRER P_ID == " + ID)
+    jumpDF = SqlDFLoad(dbName + 'SS.db', "select P_ID, P_Game, A_Game, Cos from JumpAvg WHRER P_ID == " + ID)
+    posDF = SqlDFLoad(dbName + 'SS.db', "select P_ID, P_Game, A_Game, Cos from PosAvg WHRER P_ID == " + ID)
+
+    totalGameDF = list()
+
+    totalDF = list()
+
+    for P_Game in range(1, A_maxGame):
+        OverFilter = overDF[overDF['P_Game'] == P_Game]
+        JumpFilter = jumpDF[jumpDF['P_Game'] == P_Game]
+        CosFilter = posDF[posDF['P_Game'] == P_Game]
+        for A_Game in range(1, A_maxGame):
+            if P_Game != A_Game:
+                A_OverFilter = OverFilter[OverFilter['A_Game'] == A_Game]
+                A_JumpFilter = JumpFilter[JumpFilter['A_Game'] == A_Game]
+                A_CosFilter = CosFilter[CosFilter['A_Game'] == A_Game]
+                conDF = pd.concat([OverFilter, JumpFilter, CosFilter], axis = 0)
+                avg = np.mean(conDF['Cos'].values)
+                appendAvgDF =  pd.DataFrame(data=[(str(ID), P_Game, A_Game, avg)], columns = ['P_ID', 'P_Game', 'A_Gmae', 'Cos'])
+                totalDF.append(appendAvgDF)
+
+    totalDF = pd.concat(totalDF)
+    totalDF = totalDF.sort_values(by=['Cos'], ascending=False, axis=0)
+
+    avg = np.mean(conDF['Cos'].values)
+    totalIDDF =  pd.DataFrame(data=[(str(ID), P_Game, A_Game, avg)], columns = ['P_ID', 'P_Game', 'A_Gmae', 'Cos'])
+
+    print('종합 완료')
+    
+    SqlDFSave(dbName +'SS.db', totalDF, 'TotalAvg')
+    SqlDFSave(dbName +'SS.db', totalIDDF, 'TotalIDAvg')
+
+def AllSS(PtoA, min, max):
+    for A_ID in range(min, max+1):
+        ID = A_ID * A_intervalID
+        PosSelfSimilarity(PtoA, ID)
+        JumpSelfSimilarity(PtoA, ID)
+        OverSelfSimilarity(PtoA, ID)
+        TotalSelfSimilarity(PtoA, ID)
+        print('자기유사도 완료: ' + str(ID))
 
 #TotalGroupA_Check([(2,6), (8,4,13), (5,11)])
 #AllPlayersData(2, 1, 121)
