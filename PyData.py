@@ -52,7 +52,6 @@ def AllPlayerPosCos(PtoA, dbName):
         PlayerTable = AiTable
         PlayerTable = PlayerTable[PlayerTable['ID'] == dbName]
 
-    P_gameCount = PlayerTable['gameNum'][len(PlayerTable)-2]
     saveDBname = int(dbName)
 
     idCount = A_maxID
@@ -61,7 +60,7 @@ def AllPlayerPosCos(PtoA, dbName):
     cosDF = list()
     avgDF = list()
 
-    for Game in range(1, P_gameCount+1):
+    for Game in range(1, P_maxGame):
         playerFilterTable = PlayerTable[PlayerTable['gameNum'] == Game]
         for ID in range(1, idCount):
             if PtoA == 1 or PtoA == 2:
@@ -185,7 +184,8 @@ def AllPlayerPosCos(PtoA, dbName):
 
     avgGameDF = pd.concat(gameAvg)
     avgGameDF = SortByP_GameCos(avgGameDF)
-
+    
+    # 여기가 문제인 듯
     avgID_DF = AvgDup(PtoA, dbName, avgDF)
     avgID_DF = avgID_DF.sort_values(by=['Cos'], ascending=False, axis=0)
     
@@ -795,7 +795,7 @@ def AllPlayerData(PtoA, P_ID):
     ### 포지션
     AllPlayerPosCos(PtoA, P_ID)
 
-    #TotalGame(PtoA, P_ID)
+    TotalGame(PtoA, P_ID)
 
     ### 종합
     Total(PtoA, P_ID)
@@ -1232,4 +1232,7 @@ def AtoA():
 
 #TotalGroupA_Check([(2,6), (8,4,13), (5,11)])
 #AllPlayersData(2, 1, 121)
-AtoA()
+#AtoA()
+
+### 포지션
+AllPlayerPosCos(2, '4')
