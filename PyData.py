@@ -302,16 +302,16 @@ def OverPlayerCos(PtoA, dbName):
         for A_ID in range(1, int(checkMaxID)):
             ID = A_ID * A_intervalID
             if PtoA == 1 or PtoA == 2:
-                if P_ID != A_ID:
+                if dbName != A_ID:
                     A_ID_filterDF = P_Game_Filter[P_Game_Filter['A_ID'] == str(ID)]
                     for A_Game in range(1, int(A_maxGame)):
                         A_Game_filterDF = A_ID_filterDF[A_ID_filterDF['A_Game'] == A_Game]
                         if len(A_Game_filterDF) > 0:
                             avg = A_Game_filterDF['Cos'].values[0]
-                            appendAvgDF =  pd.DataFrame(data=[(str(P_ID), P_Game, str(ID), A_Game, avg)], columns = ['P_ID', 'P_Game', 'A_ID', 'A_Game', 'Cos'])
+                            appendAvgDF =  pd.DataFrame(data=[(str(dbName), P_Game, str(ID), A_Game, avg)], columns = ['P_ID', 'P_Game', 'A_ID', 'A_Game', 'Cos'])
                             avgDF.append(appendAvgDF)
                         else:
-                            appendAvgDF =  pd.DataFrame(data=[(str(P_ID), P_Game, str(ID), A_Game, 0)], columns = ['P_ID', 'P_Game', 'A_ID', 'A_Game', 'Cos'])
+                            appendAvgDF =  pd.DataFrame(data=[(str(dbName), P_Game, str(ID), A_Game, 0)], columns = ['P_ID', 'P_Game', 'A_ID', 'A_Game', 'Cos'])
                             avgDF.append(appendAvgDF)
             else:
                 A_ID_filterDF = cosDF[cosDF['A_ID'] == str(ID)]
@@ -319,13 +319,11 @@ def OverPlayerCos(PtoA, dbName):
                     A_Game_filterDF = A_ID_filterDF[A_ID_filterDF['A_Game'] == A_Game]
                     if len(A_Game_filterDF) > 0:
                         avg = A_Game_filterDF['Cos'].values[0]
-                        appendAvgDF =  pd.DataFrame(data=[(str(P_ID), P_Game, str(ID), A_Game, avg)], columns = ['P_ID', 'P_Game', 'A_ID', 'A_Game', 'Cos'])
+                        appendAvgDF =  pd.DataFrame(data=[(str(dbName), P_Game, str(ID), A_Game, avg)], columns = ['P_ID', 'P_Game', 'A_ID', 'A_Game', 'Cos'])
                         avgDF.append(appendAvgDF)
                     else:
-                        appendAvgDF =  pd.DataFrame(data=[(str(P_ID), P_Game, str(ID), A_Game, 0)], columns = ['P_ID', 'P_Game', 'A_ID', 'A_Game', 'Cos'])
+                        appendAvgDF =  pd.DataFrame(data=[(str(dbName), P_Game, str(ID), A_Game, 0)], columns = ['P_ID', 'P_Game', 'A_ID', 'A_Game', 'Cos'])
                         avgDF.append(appendAvgDF)
-
-        print('플레이어 완료: ' + str(P_ID))
 
     avgDF = pd.concat(avgDF)
     avgDF = avgDF.sort_values(by=['Cos'], ascending=False, axis=0)
