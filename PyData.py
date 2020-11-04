@@ -43,10 +43,14 @@ def AllPlayerPosCos(PtoA, dbName):
     fileName = "playerData" + dbName + ".db"
 
     # A의 자료를 B의 자료에서 확인하여 가장 높은 평균 유사도의 게임을 찾아낸다.
-    PlayerTable = SqlDFLoad(fileName, "select ID, gameNum, step, xPos, yPos from ML")
+    PlayerTable = []
     AiTable = SqlDFLoad("sqlSetML.db", "select ID, gameNum, step, xPos, yPos from ML")
+
     # PtoP라면
-    if PtoA == 1:
+    if PtoA == 0:
+        PlayerTable = SqlDFLoad(fileName, "select ID, gameNum, step, xPos, yPos from ML")
+    elif PtoA == 1:
+        PlayerTable = SqlDFLoad(fileName, "select ID, gameNum, step, xPos, yPos from ML")
         AiTable = SqlDFLoad("sqlSetML.db", "select ID, gameNum, step, xPos, yPos from ML WHERE ID != " + '"' + dbName + '"')
     elif PtoA == 2:
         PlayerTable = AiTable
