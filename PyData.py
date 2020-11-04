@@ -349,7 +349,7 @@ def OverPlayerCos(PtoA, dbName):
                     # 유사도 순으로 정렬1
                     A_filterDF = A_filterDF.sort_values(by=['Cos'], ascending=False, axis=0)
                     # 정렬 된 유사도 중 1등만 빼고 삭제한다.
-                    A_filterDF = A_filterDF.drop_duplicates(['P_Step'])
+                    A_filterDF = A_filterDF.drop_duplicates(['P_Game', 'P_Step'])
                     # 플레이더 데이터가 AI 데이터보다 적을 경우
                     aiFilter = aiFilterPos[aiFilterPos['A_ID'] == str(ID)]
                     lenP = len(playerTablePos)
@@ -388,7 +388,7 @@ def OverPlayerCos(PtoA, dbName):
                 # 유사도 순으로 정렬1
                 A_filterDF = A_filterDF.sort_values(by=['Cos'], ascending=False, axis=0)
                 # 정렬 된 유사도 중 1등만 빼고 삭제한다.
-                A_filterDF = A_filterDF.drop_duplicates(['P_Step'])
+                A_filterDF = A_filterDF.drop_duplicates(['P_Game', 'P_Step'])
                 # 플레이더 데이터가 AI 데이터보다 적을 경우
                 aiFilter = aiFilterPos[aiFilterPos['A_ID'] == str(ID)]
                 lenP = len(playerTablePos)
@@ -1521,7 +1521,7 @@ def AllSS(PtoA, min, max):
 ### 포지션
 #AllPlayerPosCos(2, '4')
 
-AllSS(1, 1,14)
+#AllSS(1, 1,14)
 
 #OverSelfSimilarity(0, '114')
 #TotalSelfSimilarity(0, '114')
