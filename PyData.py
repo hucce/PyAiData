@@ -231,36 +231,37 @@ def OverPlayerCos(PtoA, dbName):
 
     playerTablePos.columns = ['P_Game', 'P_Step', 'P_xPos', 'P_yPos']
     aiFilterPos.columns = ['A_ID', 'A_Game', 'A_Step', 'A_xPos', 'A_yPos']
-
-    # 형변환
-    playerOver = csr_matrix(P_Filter[['xPos', 'yPos']].values)
-    aiOver = csr_matrix(A_Filter[['xPos', 'yPos']].values)
-
-    # 유사도 계산
-    similarity_simple_pair = cosine_similarity(playerOver, aiOver)
-                
-    tableDF = pd.DataFrame(similarity_simple_pair)
-
-    playerTablePos.reset_index(drop=True, inplace=True)
-    aiFilterPos.reset_index(drop=True, inplace=True)
-
-    cosDF = list()
-
-    # 유사도 계산 된 것을 정렬한다.
-    for i in range(0, len(tableDF)):
-        input = tableDF.iloc[i]
-        inDF = pd.concat([aiFilterPos, input], axis=1)
-        inDF.columns = ['A_ID', 'A_Game', 'A_Step', 'A_xPos', 'A_yPos', 'Cos']
-        inDF['P_ID'] = str(saveDBname)
-        for col in range(0, len(playerTablePos.columns)):
-            input = playerTablePos.iat[i, col]
-            inDF[playerTablePos.columns[col]] = input
-        # 정렬
-        inDF.sort_values(by=['Cos'], ascending=False, axis=0)
-        cosDF.append(inDF)
     
-    cosDF = pd.concat(cosDF)
-    cosDF = cosDF[['P_ID', 'P_Game', 'P_Step', 'P_xPos', 'P_yPos', 'A_ID', 'A_Game', 'A_Step', 'A_xPos', 'A_yPos', 'Cos']]
+    if len(playerTablePos) > 0:
+        # 형변환
+        playerOver = csr_matrix(P_Filter[['xPos', 'yPos']].values)
+        aiOver = csr_matrix(A_Filter[['xPos', 'yPos']].values)
+
+        # 유사도 계산
+        similarity_simple_pair = cosine_similarity(playerOver, aiOver)
+                
+        tableDF = pd.DataFrame(similarity_simple_pair)
+
+        playerTablePos.reset_index(drop=True, inplace=True)
+        aiFilterPos.reset_index(drop=True, inplace=True)
+
+        cosDF = list()
+
+        # 유사도 계산 된 것을 정렬한다.
+        for i in range(0, len(tableDF)):
+            input = tableDF.iloc[i]
+            inDF = pd.concat([aiFilterPos, input], axis=1)
+            inDF.columns = ['A_ID', 'A_Game', 'A_Step', 'A_xPos', 'A_yPos', 'Cos']
+            inDF['P_ID'] = str(saveDBname)
+            for col in range(0, len(playerTablePos.columns)):
+                input = playerTablePos.iat[i, col]
+                inDF[playerTablePos.columns[col]] = input
+            # 정렬
+            inDF.sort_values(by=['Cos'], ascending=False, axis=0)
+            cosDF.append(inDF)
+    
+        cosDF = pd.concat(cosDF)
+        cosDF = cosDF[['P_ID', 'P_Game', 'P_Step', 'P_xPos', 'P_yPos', 'A_ID', 'A_Game', 'A_Step', 'A_xPos', 'A_yPos', 'Cos']]
 
     gameAvg = list()
     checkMaxID = ((A_maxID-1) / A_intervalID) +1
@@ -424,7 +425,8 @@ def OverPlayerCos(PtoA, dbName):
     avgIDDF = avgDF.sort_values(by=['Cos'], ascending=False, axis=0)
     print('죽음 처리 완료')
     # 모든 작업이 끝나면 DF로 변환 후
-    SqlDFSave('overCos' + dbName + '.db', cosDF, 'OverCos')
+    if len(playerTablePos) > 0:
+        SqlDFSave('overCos' + dbName + '.db', cosDF, 'OverCos')
     SqlDFSave('saveSqlData.db', avgDF, 'OverAvg')
     SqlDFSave('saveSqlData.db', avgGameDF, 'OverGameAvg')
     SqlDFSave('saveSqlData.db', avgIDDF, 'OverIDAvg')
@@ -1516,7 +1518,7 @@ def AllSS(PtoA, min, max):
 
 #TotalGroupA_Check([(2,6), (8,4,13), (5,11)])
 #AllPlayersData(2, 1, 121)
-#AtoA(16, 120)
+AtoA(112, 120)
 
 ### 포지션
 #AllPlayerPosCos(2, '4')
