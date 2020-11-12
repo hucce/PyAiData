@@ -20,6 +20,16 @@ A_intervalID = 2
 def cos_sim(v1, v2): 
     return dot(v1, v2)/(norm(v1)*norm(v2))
 
+def SqlAtoADFLoad(file, execute):
+  # SQLite DB 연결
+  conn = sqlite3.connect("D:/GoogleDrive/강화학습DB백업/AtoA/" + str(file))
+
+  df = pd.read_sql(execute, conn)
+
+  conn.close()
+
+  return df
+
 def SqlDFLoad(file, execute):
   # SQLite DB 연결
   conn = sqlite3.connect("content/" + str(file))
@@ -35,7 +45,7 @@ def SqlDFSave(file, tableDF, tableName):
   conn = sqlite3.connect("content/" + str(file))
 
   # if_exists = 'replace' , if_exists = 'append'
-  tableDF.to_sql(tableName, conn, if_exists='append', index=False)
+  tableDF.to_sql(tableName, conn, if_exists='replace', index=False)
 
   conn.close()
 
@@ -1006,9 +1016,11 @@ def AvgsReOver():
     SqlDFSave('saveSqlData.db', PosDF, 'OverAvg')
 
 def AllTotalCal(PtoA, min, max):
+
     for P_ID in range(min, max):
-        Total(PtoA, str(P_ID))
-        print('종합 데이터 수정중: ' + str(P_ID))
+        ID = P_ID * A_intervalID
+        Total(PtoA, str(ID))
+        print('종합 데이터 수정중: ' + str(ID))
 
 def TotalGroupA_Check(groupList):
     fileName = 'saveSqlData.db'
@@ -1247,9 +1259,10 @@ def OverIDGame(PtoA):
     avgDF = list()
     # 이제 검사된 값으로 반대로 가장 비슷한 학습량을 찾아냄
     # 평균을 계산할때 Ai와 플레이어의 횟수를 검사한다.
-    for P_ID in range(1, int(P_maxID)):
-        P_ID_filter = OverDF[OverDF['P_ID'] == str(P_ID)]
-        avgDF.append(AvgDup(PtoA, P_ID, P_ID_filter))    
+    for P_ID in range(1, 61):
+        ID = P_ID * 2
+        P_ID_filter = OverDF[OverDF['P_ID'] == str(ID)]
+        avgDF.append(AvgDup(PtoA, str(ID), P_ID_filter))    
         print('플레이어 오버: ' + str(P_ID))
 
     avgDF = pd.concat(avgDF)
@@ -1542,6 +1555,144 @@ def AllSS(PtoA, min, max):
         TotalSelfSimilarity(PtoA, str(ID))
         print('자기유사도 완료: ' + str(ID))
 
+def LenAtoA():
+    totalDF = []
+    decList = ['posCos', 'jumpCos', 'overCos']
+    for dec in decList:
+        count = 0
+        for i in range(1, 61):
+            ID = i*2
+            sql = SqlAtoADFLoad(dec + str(ID) +'.db', 'select P_ID from ' + dec)
+            count += len(sql)
+            print('카운트' + str(ID) + ' ' + str(count))
+        appendAvgDF =  pd.DataFrame(data=[(dec, count)], columns = ['Type', 'Count'])
+        totalDF.append(appendAvgDF)
+        print('완료' + dec + ' ' + str(count))
+
+    totalDF = pd.concat(totalDF)
+    SqlDFSave('len.db', totalDF, 'TotalAvg')
+
+def GroupS(groupList, fromDec):
+    sqlTable = SqlDFLoad('playersCosData.db', "select P_ID, P_Game, A_ID, A_Game, Cos from " + fromDec)
+    DF_List = list()
+    for group in groupList:
+        # 기준이 되는 첫번째
+        zeroPlayer = group[0]
+        filterSql = sqlTable[sqlTable['P_ID'] == str(zeroPlayer)]
+        for p in range(1, len(group)):
+            FilterTable2 = filterSql[filterSql['A_ID'] == str(group[p])]
+            #중복 되지 않도록해서 넣는다.
+            aGameList = list()
+            for P_Game in range(1, 11):
+                FilterTable3 = FilterTable2[FilterTable2['P_Game'] == P_Game]
+                FilterTable3 = FilterTable3.sort_values(by=['Cos'], ascending=False, axis=0)
+                # 필터
+                for filterA_Game in aGameList:
+                    FilterTable3 = FilterTable3[FilterTable3['A_Game'] != filterA_Game]
+                DF_List.append(FilterTable3.iloc[0:1])
+                aGameList.append(FilterTable3['A_Game'].values[0])
+
+    conDF = pd.concat(DF_List)
+    SqlDFSave('GameAvg.db', conDF, fromDec)
+
+def AllGroupS(groupList):
+    avglist = ['PosAvg', 'OverAvg', 'JumpAvg', 'TotalByGameAvg']
+    for avg in avglist:
+        GroupS(groupList, avg)
+
+def Group():
+    sqlTable = SqlDFLoad('GameAvg.db', "select P_ID, P_Game, A_ID, A_Game, Cos from " + fromDec)
+
+def AllGroupAIGame(gList):
+    avglist = ['OverAvg', 'PosAvg', 'JumpAvg', 'TotalByGameAvg']
+    for avg in range(0, len(avglist)):
+        GroupAIS(gList, avglist[avg])
+
+def GroupAIS(groupList, fromDec):
+    sqlTable = SqlDFLoad('GameAvg.db', "select P_ID, P_Game, A_ID, A_Game, Cos from " + fromDec)
+    sqlAITable = SqlDFLoad('GameByAvg.db', "select P_ID, P_Game, A_ID, Cos from " + fromDec)
+    DF_List = list()
+    groupID = 1
+    for group in groupList:
+        # 기준이 되는 첫번째
+        zeroPlayer = group[0]
+        filterSql = sqlTable[sqlTable['P_ID'] == str(zeroPlayer)]
+        meanList = list()
+        for game in range(1, 11):
+            filterGame = filterSql[filterSql['P_Game'] == game]
+            # 기본
+            FilterTableAI1 = sqlAITable[sqlAITable['P_ID'] == str(zeroPlayer)]
+            FilterTableAI1 = FilterTableAI1[FilterTableAI1['P_Game'] == game]
+            FilterTableAI1 = FilterTableAI1.astype({'A_ID': 'int'})
+            FilterTableAI1 = FilterTableAI1.sort_values(by=['A_ID'], ascending=True, axis=0)
+            FilterTableAI1.reset_index(drop=True, inplace=True)
+            
+            conDF = FilterTableAI1['A_ID']
+            meanList.append(FilterTableAI1['Cos'])
+            #print(FilterTableAI1)
+
+            for p in range(0, len(filterGame)):
+                g_Player = filterGame['A_ID'].values[p]
+                g_Game = filterGame['A_Game'].values[p]
+
+                FilterTableAI2 = sqlAITable[sqlAITable['P_ID'] == str(g_Player)]
+                FilterTableAI2 = FilterTableAI2[FilterTableAI2['P_Game'] == g_Game]
+                FilterTableAI2 = FilterTableAI2.astype({'A_ID': 'int'})
+                FilterTableAI2 = FilterTableAI2.sort_values(by=['A_ID'], ascending=True, axis=0)
+                FilterTableAI2.reset_index(drop=True, inplace=True)
+                
+                #print(FilterTableAI2)
+                meanList.append(FilterTableAI2['Cos'])
+
+                
+            #
+            contactDF = pd.concat(meanList, axis=1)
+            meanDF = contactDF.mean(axis=1)
+            conDF = pd.concat([conDF, meanDF], axis=1)
+            conDF.columns = ['A_ID', 'Cos']
+            conDF['G_ID'] = str(groupID)
+            conDF['G_Game'] = game
+            conDF = conDF[['G_ID','G_Game','A_ID','Cos']]
+            conDF = conDF.sort_values(by=['Cos'], ascending=False, axis=0)
+            DF_List.append(conDF)
+            #print(conDF)
+        groupID += 1
+    
+    conDF = pd.concat(DF_List)
+    SqlDFSave('GameAvgTotal.db', conDF, fromDec)
+
+def TotalAidu():
+    sqlAITable = SqlDFLoad('aiCosData.db', "select P_ID, P_Game, A_ID, Cos from TotalGameAvg")
+    sqlAITable = sqlAITable.drop_duplicates(['P_ID', 'P_Game', 'A_ID'])
+    SqlDFSave('aiCosData.db', sqlAITable, 'TotalGameAvg')
+
+
+def AllReGameAvg():
+    avglist = ['PosAvg', 'OverAvg', 'JumpAvg', 'TotalByGameAvg']
+    for avg in range(0, len(avglist)):
+        ReGameAvg(avglist[avg])
+
+def ReGameAvg(fromDec):
+    sqlAITable = SqlDFLoad('aiCosData.db', "select P_ID, P_Game, A_ID, A_Game, Cos from " + fromDec)
+    gameAvg = list()
+    for P_ID in range(1, 15):
+        p_filter = sqlAITable[sqlAITable['P_ID'] == str(P_ID)]
+        for P_Game in range(1, 11):
+            pg_filter = p_filter[p_filter['P_Game'] == P_Game]        
+            for A_ID in range(1, 61):
+                ID = A_ID *2
+                a_filter = pg_filter[pg_filter['A_ID'] == str(ID)]
+                avg = 0
+                if len(a_filter) > 0:
+                    avg = np.mean(a_filter['Cos'].values)
+                appendAvgDF =  pd.DataFrame(data=[(str(P_ID), P_Game, str(ID), avg)], columns = ['P_ID', 'P_Game', 'A_ID', 'Cos'])
+                gameAvg.append(appendAvgDF)
+
+    avgGameDF = pd.concat(gameAvg)
+    #avgGameDF = SortByP_GameCos(avgGameDF)
+    print('완료' + fromDec)
+    SqlDFSave('GameByAvg.db', avgGameDF, str(fromDec))
+
 #TotalGroupA_Check([(2,6), (8,4,13), (5,11)])
 #AllPlayersData(2, 1, 121)
 #AtoA(112, 120)
@@ -1549,9 +1700,19 @@ def AllSS(PtoA, min, max):
 ### 포지션
 #AllPlayerPosCos(2, '4')
 
-#AllSS(1, 1,14)
+#OverPlayerCos(2, '112')
 
-#OverSelfSimilarity(0, '114')
-#TotalSelfSimilarity(0, '114')
+#OverIDGame(2)
 
-OverPlayerCos(2, '112')
+#AllTotalCal(2, 2, 61)
+
+#TotalContact()
+
+#LenAtoA()
+
+#AllGroupS([(2,6), (4,8,13), (5,11)])
+AllGroupAIGame([(2,6), (4,8,13), (5,11)])
+
+#TotalAidu()
+
+#AllReGameAvg()
