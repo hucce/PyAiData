@@ -1609,7 +1609,7 @@ def AllGroupAIGame(gList):
         GroupAIS(gList, avglist[avg])
 
 def GroupAIS(groupList, fromDec):
-    sqlTable = SqlDFLoad('GameAvg.db', "select P_ID, P_Game, A_ID, A_Game, Cos from " + fromDec)
+    sqlTable = SqlDFLoad('GameAvg.db', "select P_ID, P_Game, A_ID, A_Game, Cos from TotalByGameAvg")
     sqlAITable = SqlDFLoad('GameByAvg.db', "select P_ID, P_Game, A_ID, Cos from " + fromDec)
     DF_List = list()
     groupID = 1
