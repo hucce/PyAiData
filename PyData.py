@@ -1604,9 +1604,6 @@ def AllGroupS(groupList):
     for avg in avglist:
         GroupS(groupList, avg)
 
-def Group():
-    sqlTable = SqlDFLoad('GameAvg.db', "select P_ID, P_Game, A_ID, A_Game, Cos from " + fromDec)
-
 def AllGroupAIGame(gList):
     avglist = ['OverAvg', 'PosAvg', 'JumpAvg', 'TotalByGameAvg']
     for avg in range(0, len(avglist)):
@@ -1701,7 +1698,6 @@ def ReTotalAvg():
     sqlAITableOver = SqlDFLoad('GameByAvg.db', "select P_ID, P_Game, A_ID, Cos from OverAvg")
     sqlAITableJump = SqlDFLoad('GameByAvg.db', "select P_ID, P_Game, A_ID, Cos from JumpAvg")
     
-
     baseTable = sqlAITablePos[['P_ID', 'P_Game', 'A_ID']]
     avgGameDF = pd.concat([sqlAITablePos['Cos'], sqlAITableOver['Cos'], sqlAITableJump['Cos']], axis = 1)
     meanDF = avgGameDF.mean(axis=1)
@@ -1763,6 +1759,14 @@ def ReJumpAtoA():
         JumpPlayerCos(2, str(ID))
         print('점프')
 
+def ReTotal():
+    sqlAITableAvg = SqlDFLoad('saveSqlData.db', "select P_ID, P_Game, A_ID, Cos from JumpAvg")
+    sqlAITableGameAvg = SqlDFLoad('saveSqlData.db', "select P_ID, P_Game, A_ID, Cos from JumpGameAvg")
+    sqlAITableIDAvg = SqlDFLoad('saveSqlData.db', "select P_ID, P_Game, A_ID, Cos from JumpIDAvg")
+    SqlDFSave('AtoA.db', sqlAITableAvg, 'JumpAvg')
+    SqlDFSave('AtoA.db', sqlAITableGameAvg, 'JumpGameAvg')
+    SqlDFSave('AtoA.db', sqlAITableIDAvg, 'JumpIDAvg')
+
 #TotalGroupA_Check([(2,6), (8,4,13), (5,11)])
 #AllPlayersData(2, 1, 121)
 #AtoA(112, 120)
@@ -1791,5 +1795,8 @@ def ReJumpAtoA():
 
 #ReTotalAvg()
 
-# 점프 문제 수정
-ReJumpAtoA()
+ReTotal()
+
+for aid in range(1,61):
+    ID = aid *2
+    Total(2, str(ID))
