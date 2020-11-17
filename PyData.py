@@ -486,7 +486,8 @@ def OverFilter(OverDF):
 
 def JumpFilter(jumpDF, col):
     for i in jumpDF.index:
-        if i+1 <= len(jumpDF.index)-1:
+        count = len(jumpDF.index)-1
+        if i+1 <= count:
             # 인덱스, 컬럼
             value1 = jumpDF.iat[i, col] +1 
             value2 = jumpDF.iat[i+1, col]
@@ -511,12 +512,15 @@ def JumpPlayerCos(PtoA, dbName):
         AiTable = SqlDFLoad("sqlSetML.db", "select ID, gameNum, step, xPos, yPos, JumpStep from ML WHERE JumpStep > 0 and ID != " + '"' + dbName + '"')
     elif PtoA == 2:
         PlayerTable = AiTable
-        PlayerTable = PlayerTable[PlayerTable['ID'] == dbName]
+        PlayerTable = PlayerTable[PlayerTable['ID'] == str(dbName)]
 
     P_gameCount = P_maxGame
     idCount = A_maxID
     gameCount = A_maxGame
     saveDBname = int(dbName)
+
+    PlayerTable.reset_index(drop=True, inplace=True)
+    AiTable.reset_index(drop=True, inplace=True)
 
     # 일단 두개다 필터링
     # JumpStep = 5
@@ -1696,6 +1700,7 @@ def ReTotalAvg():
     sqlAITablePos = SqlDFLoad('GameByAvg.db', "select P_ID, P_Game, A_ID, Cos from PosAvg")
     sqlAITableOver = SqlDFLoad('GameByAvg.db', "select P_ID, P_Game, A_ID, Cos from OverAvg")
     sqlAITableJump = SqlDFLoad('GameByAvg.db', "select P_ID, P_Game, A_ID, Cos from JumpAvg")
+    
 
     baseTable = sqlAITablePos[['P_ID', 'P_Game', 'A_ID']]
     avgGameDF = pd.concat([sqlAITablePos['Cos'], sqlAITableOver['Cos'], sqlAITableJump['Cos']], axis = 1)
@@ -1704,6 +1709,25 @@ def ReTotalAvg():
     conDF.columns = ['P_ID', 'P_Game', 'A_ID', 'Cos']
 
     SqlDFSave('GameByAvg.db', conDF, 'TotalByGameAvg')
+
+def ReTotalAvg():
+    sqlAITablePos = SqlDFLoad('GroupGameAvgTotal.db', "select G_ID, G_Game, A_ID, Cos from PosAvg")
+    sqlAITableOver = SqlDFLoad('GroupGameAvgTotal.db', "select G_ID, G_Game, A_ID, Cos from OverAvg")
+    sqlAITableJump = SqlDFLoad('GroupGameAvgTotal.db', "select G_ID, G_Game, A_ID, Cos from JumpAvg")
+    sqlAITablePos = sqlAITablePos.astype({'A_ID': 'int'})
+    sqlAITableOver = sqlAITablePos.astype({'A_ID': 'int'})
+    sqlAITableJump = sqlAITablePos.astype({'A_ID': 'int'})
+    sqlAITablePos = sqlAITablePos.sort_values(by=['G_ID', 'G_Game', 'A_ID'], ascending=True)
+    sqlAITableOver =sqlAITableOver.sort_values(by=['G_ID', 'G_Game', 'A_ID'], ascending=True)
+    sqlAITableJump=  sqlAITableJump.sort_values(by=['G_ID', 'G_Game', 'A_ID'], ascending=True)
+
+    baseTable = sqlAITablePos[['G_ID', 'G_Game', 'A_ID']]
+    avgGameDF = pd.concat([sqlAITablePos['Cos'], sqlAITableOver['Cos'], sqlAITableJump['Cos']], axis = 1)
+    meanDF = avgGameDF.mean(axis=1)
+    conDF = pd.concat([baseTable, meanDF], axis=1)
+    conDF.columns = ['G_ID', 'G_Game', 'A_ID', 'Cos']
+
+    SqlDFSave('GroupGameAvgTotal.db', conDF, 'TotalByGameAvg')
 
 def LenSS(A):
     fromList = ['OverCos','JumpCos', 'PosCos']
@@ -1733,6 +1757,11 @@ def LenSS(A):
             appendAvgDF =  pd.DataFrame(data=[(fromDec, lens)], columns = ['Type', 'Count'])
             SqlDFSave('lenSS.db', appendAvgDF, 'Human' + fromDec)
 
+def ReJumpAtoA():
+    for aid in range(1, 61):
+        ID = aid *2
+        JumpPlayerCos(2, str(ID))
+        print('점프')
 
 #TotalGroupA_Check([(2,6), (8,4,13), (5,11)])
 #AllPlayersData(2, 1, 121)
@@ -1760,4 +1789,7 @@ def LenSS(A):
 
 #LenSS(False)
 
-ReTotalAvg()
+#ReTotalAvg()
+
+# 점프 문제 수정
+ReJumpAtoA()
