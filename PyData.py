@@ -1644,7 +1644,6 @@ def GroupAIS(groupList, fromDec):
                 #print(FilterTableAI2)
                 meanList.append(FilterTableAI2['Cos'])
 
-                
             #
             contactDF = pd.concat(meanList, axis=1)
             meanDF = contactDF.mean(axis=1)
@@ -1693,6 +1692,48 @@ def ReGameAvg(fromDec):
     print('완료' + fromDec)
     SqlDFSave('GameByAvg.db', avgGameDF, str(fromDec))
 
+def ReTotalAvg():
+    sqlAITablePos = SqlDFLoad('GameByAvg.db', "select P_ID, P_Game, A_ID, Cos from PosAvg")
+    sqlAITableOver = SqlDFLoad('GameByAvg.db', "select P_ID, P_Game, A_ID, Cos from OverAvg")
+    sqlAITableJump = SqlDFLoad('GameByAvg.db', "select P_ID, P_Game, A_ID, Cos from JumpAvg")
+
+    baseTable = sqlAITablePos[['P_ID', 'P_Game', 'A_ID']]
+    avgGameDF = pd.concat([sqlAITablePos['Cos'], sqlAITableOver['Cos'], sqlAITableJump['Cos']], axis = 1)
+    meanDF = avgGameDF.mean(axis=1)
+    conDF = pd.concat([baseTable, meanDF], axis=1)
+    conDF.columns = ['P_ID', 'P_Game', 'A_ID', 'Cos']
+
+    SqlDFSave('GameByAvg.db', conDF, 'TotalByGameAvg')
+
+def LenSS(A):
+    fromList = ['OverCos','JumpCos', 'PosCos']
+    totalDF = list()
+    if A == True:
+        for fromDec in fromList:
+            lens = 0
+            for aid in range(1, 61):
+                id = aid *2
+                if fromDec != 'OverCos':
+                    sqlTable = SqlDFLoad('Ai_SS' + str(id) + '.db', "select P_ID from " + fromDec)
+                    lens += len(sqlTable)
+                else:
+                    if id != 112 and id != 114:
+                        sqlTable = SqlDFLoad('Ai_SS' + str(id) + '.db', "select P_ID from " + fromDec)
+                        lens += len(sqlTable)
+                print('확인' + str(id))
+            appendAvgDF =  pd.DataFrame(data=[(fromDec, lens)], columns = ['Type', 'Count'])
+            SqlDFSave('lenSS.db', appendAvgDF, 'AI' + fromDec)
+    else:
+        for fromDec in fromList:
+            lens = 0
+            for id in range(1, 15):
+                sqlTable = SqlDFLoad('Human_SS' + str(id) + '.db', "select P_ID from " + fromDec)
+                lens += len(sqlTable)
+
+            appendAvgDF =  pd.DataFrame(data=[(fromDec, lens)], columns = ['Type', 'Count'])
+            SqlDFSave('lenSS.db', appendAvgDF, 'Human' + fromDec)
+
+
 #TotalGroupA_Check([(2,6), (8,4,13), (5,11)])
 #AllPlayersData(2, 1, 121)
 #AtoA(112, 120)
@@ -1711,8 +1752,12 @@ def ReGameAvg(fromDec):
 #LenAtoA()
 
 #AllGroupS([(2,6), (4,8,13), (5,11)])
-AllGroupAIGame([(2,6), (4,8,13), (5,11)])
+#AllGroupAIGame([(2,6), (4,8,13), (5,11)])
 
 #TotalAidu()
 
 #AllReGameAvg()
+
+#LenSS(False)
+
+ReTotalAvg()
